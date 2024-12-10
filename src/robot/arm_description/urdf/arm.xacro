@@ -12,6 +12,25 @@
     <xacro:property name="joint_2" value="0.0" />
     <xacro:property name="joint_3" value="0.0" />
 
+    <link name="world">
+        <collision>
+            <geometry>
+                <box size="10 10 0.01" />
+            </geometry>
+        </collision>
+
+        <inertial>
+            <mass value="1000.0" />
+            <inertia ixx="100.0" ixy="0.0" ixz="0.0" iyy="100.0" iyz="0.0" izz="100.0" />
+        </inertial>
+    </link>
+
+    <joint name="base_to_world" type="fixed">
+        <parent link="world" />
+        <child link="base_link" />
+        <origin xyz="0 0 1" rpy="0 0 0" />
+    </joint>
+
     <link name="${jnt_prefix}base_link"></link>
 
     <joint name="JOINT_0" type="fixed">
@@ -37,49 +56,4 @@
         gazebo="${use_gazebo}"
         jnt_pref="${jnt_prefix}"
         simplify_meshes="${simplify_meshes_lower_leg}" />
-
-    <xacro:if value="${use_gazebo}">
-        <gazebo reference="base_link">
-            <material>Gazebo/White</material>
-        </gazebo>
-
-        <ros2_control name="GazeboSystem" type="system">
-            <hardware>
-                <plugin>gazebo_ros2_control/GazeboSystem</plugin>
-            </hardware>
-            <joint name="JOINT_1">
-                <command_interface name="effort" />
-                <state_interface name="position">
-                    <param name="initial_value">-${joint_1}</param>
-                </state_interface>
-                <state_interface name="velocity">
-                    <param name="initial_value">0.0</param>
-                </state_interface>
-                <state_interface name="effort" />
-            </joint>
-            <joint name="JOINT_2">
-                <command_interface name="effort" />
-                <state_interface name="position">
-                    <param name="initial_value">${joint_2}</param>
-                </state_interface>
-                <state_interface name="velocity">
-                    <param name="initial_value">0.0</param>
-                </state_interface>
-                <state_interface name="effort" />
-            </joint>
-            <joint name="JOINT_3">
-                <command_interface name="effort" />
-                <state_interface name="position">
-                    <param name="initial_value">${joint_3}</param>
-                </state_interface>
-                <state_interface name="velocity">
-                    <param name="initial_value">0.0</param>
-                </state_interface>
-                <state_interface name="effort" />
-            </joint>
-        </ros2_control>
-
-    </xacro:if>
-    <xacro:unless value="${use_gazebo}">
-    </xacro:unless>
 </robot>

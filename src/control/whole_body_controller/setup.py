@@ -20,6 +20,7 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
+            'wbc_node = whole_body_controller.wbc_node:main',
         ],
     },
 )

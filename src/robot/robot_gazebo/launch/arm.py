@@ -29,7 +29,7 @@ def generate_launch_description():
     )
 
     arm_description = ParameterValue(
-        Command(['xacro ', urdf_path, ' use_gazebo:=True']),
+        Command(['xacro ', urdf_path]),
         value_type=str,
     )
 
@@ -68,7 +68,7 @@ def generate_launch_description():
             '-name', 'arm',
             '-x', '0',
             '-y', '0',
-            '-z', '1',
+            '-z', '0',
         ],
         output='screen',
     )
@@ -94,6 +94,14 @@ def generate_launch_description():
         parameters=[{'use_sim_time': True}],
         output='screen',
     )
+    
+    spawn_controller = Node(
+        package="whole_body_controller",
+        executable="wbc_node",
+        parameters=[{'use_sim_time': True}],
+        output='screen',
+        emulate_tty=True,
+    )
 
     return LaunchDescription([
         gz,
@@ -102,4 +110,5 @@ def generate_launch_description():
         spawn_arm,
         spawn_joint_state_broadcaster,
         spawn_effort_controller,
+        spawn_controller,
     ])
