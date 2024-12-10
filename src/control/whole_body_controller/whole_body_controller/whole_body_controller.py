@@ -49,3 +49,5 @@ class WholeBodyController:
         sol = self.hqp(A, b, C, d)
         
         tau_opt = sol[0:self.control_tasks.n_q]
+        
+        return tau_opt

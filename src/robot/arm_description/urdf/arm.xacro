@@ -3,6 +3,7 @@
 
     <xacro:include filename="$(find arm_description)/urdf/links.xacro" />
     <xacro:include filename="$(find arm_description)/urdf/material.xacro" />
+    <xacro:include filename="$(find arm_description)/urdf/arm_gazebo.xacro" />
    
     <xacro:property name="use_gazebo" value="true" />
     <xacro:property name="simplify_meshes_lower_leg" value="false"/>

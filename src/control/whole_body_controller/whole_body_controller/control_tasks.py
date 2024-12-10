@@ -15,9 +15,9 @@ class ControlTasks:
         
         self.n_c = 2
         self.n_q = self.robot_wrapper.nq
-        self.n_state = self.n_q + self.n_q + self.n_q
-        self.n_input = self.n_q
-        self.n_x = self.n_state + self.n_input
+        self.n_s = 3*self.n_q
+        self.n_i = self.n_q
+        self.n_x = self.n_s + self.n_i
         
         self.alpha = 1.0
         self.beta = 0.1
@@ -50,20 +50,20 @@ class ControlTasks:
         M = self.robot_wrapper.mass(self.q)
         h = self.robot_wrapper.nle(self.q, self.v)
         
-        A_dyn = np.zeros((self.n_c * self.n_q, self.n_x * self.n_c))
-        b_dyn = np.zeros(self.n_c * self.n_q)
+        A_dyn = np.zeros((self.n_c * self.n_s, self.n_x * self.n_c))
+        b_dyn = np.zeros(self.n_c * self.n_s)
         
         A, B, f = self._compute_dyn_matrices()
         
-        A_dyn[0:self.n_x, self._id_ui(0)] = B
-        A_dyn[0:self.n_x, self._id_si(1)] = - np.eye(self.n_x)
-        b_dyn[0:self.n_x] = A @ np.concatenate([self.q, self.v, self.tau]) - f
+        A_dyn[0:self.n_s, self._id_ui(0)] = B
+        A_dyn[0:self.n_s, self._id_si(1)] = - np.eye(self.n_s)
+        b_dyn[0:self.n_s] = A @ np.concatenate([self.q, self.v, self.tau]) - f
         
         for i in range(1, self.n_c):
-            A_dyn[i*self.n_x:(i+1)*self.n_x, self._id_si(i)] = A
-            A_dyn[i*self.n_x:(i+1)*self.n_x, self._id_ui(i)] = B
-            A_dyn[i*self.n_x:(i+1)*self.n_x, self._id_si(i+1)] = - np.eye(self.n_x)
-            b_dyn[i*self.n_x:(i+1)*self.n_x] = - f
+            A_dyn[i*self.n_s:(i+1)*self.n_s, self._id_si(i)] = A
+            A_dyn[i*self.n_s:(i+1)*self.n_s, self._id_ui(i)] = B
+            A_dyn[i*self.n_s:(i+1)*self.n_s, self._id_si(i+1)] = - np.eye(self.n_s)
+            b_dyn[i*self.n_s:(i+1)*self.n_s] = - f
             
         return A_dyn, b_dyn
         
@@ -71,28 +71,28 @@ class ControlTasks:
         M = self.robot_wrapper.mass(self.q)
         h = self.robot_wrapper.nle(self.q, self.v)
         
-        A = np.eye(3*self.n_q)
+        A = np.eye(self.n_s)
         A[0:self.n_q, self.n_q:2*self.n_q] = np.eye(self.n_q) * self.dt
         A[2*self.n_q:3*self.n_q, 2*self.n_q:3*self.n_q] = (1 - self.alpha * self.dt) * np.eye(self.n_q)
         
-        B = np.zeros((3*self.n_q, self.n_q))
+        B = np.zeros((self.n_s, self.n_q))
         B[self.n_q:2*self.n_q, 0:self.n_q] = pinv(M) * self.dt
         B[2*self.n_q:3*self.n_q] = self.beta * self.dt * np.sign(self.tau)
         
-        f = np.zeros(self.n_q)
+        f = np.zeros(self.n_s)
         f[self.n_q:2*self.n_q] = - pinv(M) @ h * self.dt
         
         return A, B, f
     
     def task_torque_limits(self):
-        C = np.zeros((2 * self.n_c * self.n_input, self.n_x * self.n_c))
-        d = np.zeros(2 * self.n_c * self.n_input)
+        C = np.zeros((2 * self.n_c * self.n_i, self.n_x * self.n_c))
+        d = np.zeros(2 * self.n_c * self.n_i)
         
         for i in range(self.n_c):
-            C[2*i*self.n_input:(2*i+1)*self.n_input, self._id_ui(i)] = np.eye(self.n_input)
-            C[(2*i+1)*self.n_input:(2*i+2)*self.n_input, self._id_ui(i)] = - np.eye(self.n_input)
-            d[2*i*self.n_input:(2*i+1)*self.n_input] = self.tau_max
-            d[(2*i+1)*self.n_input:(2*i+2)*self.n_input] = - self.tau_min
+            C[2*i*self.n_i:(2*i+1)*self.n_i, self._id_ui(i)] = np.eye(self.n_i)
+            C[(2*i+1)*self.n_i:(2*i+2)*self.n_i, self._id_ui(i)] = - np.eye(self.n_i)
+            d[2*i*self.n_i:(2*i+1)*self.n_i] = self.tau_max
+            d[(2*i+1)*self.n_i:(2*i+2)*self.n_i] = - self.tau_min
             
         return C, d
             
@@ -101,7 +101,7 @@ class ControlTasks:
         d = np.zeros(self.n_c * self.n_q)
         
         for i in range(self.n_c):
-            C[i*self.n_q:(i+1)*self.n_q, self._id_Ti(i)] = np.eye(self.n_q)
+            C[i*self.n_q:(i+1)*self.n_q, self._id_Ti(i+1)] = np.eye(self.n_q)
             d[i*self.n_q:(i+1)*self.n_q] = self.T_max
             
         return C, d
@@ -115,16 +115,16 @@ class ControlTasks:
         J_ee = self.robot_wrapper.getFrameJacobian(id_ee, rf_frame=pin.LOCAL_WORLD_ALIGNED)
         J_ee = J_ee[0:3, :]
         
-        self.pos_ee = self.robot_wrapper.framePlacement(id_ee).translation
+        self.pos_ee = self.robot_wrapper.framePlacement(self.q, id_ee).translation
         
         J_ee_dot_times_v = pin.getFrameClassicalAcceleration(
             self.robot_wrapper.model,
             self.robot_wrapper.data,
             id_ee,
             pin.ReferenceFrame.LOCAL_WORLD_ALIGNED,
-        ).linear()
+        ).linear
         
-        A = np.zeros((3, self.n_x))
+        A = np.zeros((3, self.n_x * self.n_c))
         A[0:3, self._id_ui(0)] = J_ee @ pinv(M)
         A[0:3, self._id_vi(1)] = self.k_p * J_ee
         
@@ -145,7 +145,7 @@ class ControlTasks:
         
         return np.arange(
             i*self.n_x,
-            i*self.n_x + self.n_input,
+            i*self.n_x + self.n_i,
         )
     
     def _id_si(self, i):
@@ -154,8 +154,8 @@ class ControlTasks:
         
         im1 = i - 1
         return np.arange(
-            im1*self.n_x + self.n_input,
-            im1*self.n_x + self.n_input + 3*self.n_q,
+            im1*self.n_x + self.n_i,
+            im1*self.n_x + self.n_i + 3*self.n_q,
         )
         
     def _id_qi(self, i):
@@ -164,8 +164,8 @@ class ControlTasks:
         
         im1 = i - 1
         return np.arange(
-            im1*self.n_x + self.n_input,
-            im1*self.n_x + self.n_input + self.n_q,
+            im1*self.n_x + self.n_i,
+            im1*self.n_x + self.n_i + self.n_q,
         )
     
     def _id_vi(self, i):
@@ -174,8 +174,8 @@ class ControlTasks:
         
         im1 = i - 1
         return np.arange(
-            im1*self.n_x + self.n_input + self.n_q,
-            im1*self.n_x + self.n_input + 2*self.n_q,
+            im1*self.n_x + self.n_i + self.n_q,
+            im1*self.n_x + self.n_i + 2*self.n_q,
         )
         
     def _id_Ti(self, i):
@@ -184,6 +184,6 @@ class ControlTasks:
         
         im1 = i - 1
         return np.arange(
-            im1*self.n_x + self.n_input + 2*self.n_q,
-            im1*self.n_x + self.n_input + 3*self.n_q,
+            im1*self.n_x + self.n_i + 2*self.n_q,
+            im1*self.n_x + self.n_i + 3*self.n_q,
         )
