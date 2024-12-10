@@ -1,0 +1,268 @@
+<?xml version="1.0"?>
+
+<robot xmlns:xacro="http://ros.org/wiki/xacro">
+
+    <xacro:property name="base_2_M1_z" value="${0.0 * 0.001}" />
+
+    <xacro:property name="M1_2_M2_x" value="${190.0 * 0.001}" />
+    <xacro:property name="M1_2_M2_y" value="${44.0 * 0.001}" />
+
+    <xacro:property name="M2_2_M3_z" value="${190.0 * 0.001}" />
+    <xacro:property name="M2_2_M3_y" value="${44.0 * 0.001}" />
+
+    <xacro:property name="M3_2_M4_z" value="${190.0 * 0.001}" />
+    <xacro:property name="M3_2_M4_y" value="${44.0 * 0.001}" />
+
+    <xacro:property name="M4_2_EE_z" value="${190.0 * 0.001}" />
+    <xacro:property name="M4_2_EE_y" value="${28.0 * 0.001}" />
+
+    <xacro:property name="PI" value="3.141592" />
+
+    <!-- ARM VISUALIZATION meshes -->
+    <xacro:property name="arm_base"
+        value="file://$(find arm_description)/meshes//Body.stl" />
+    <xacro:property name="arm_module_left_front"
+        value="file://$(find arm_description)/meshes//Module_left_front.stl" />
+    <xacro:property name="arm_module_left_hind"
+        value="file://$(find arm_description)/meshes//Module_left_hind.stl" />
+    <xacro:property name="arm_module_2_left"
+        value="file://$(find arm_description)/meshes//Module_2_left.stl" />
+    <xacro:property name="arm_lower_leg_left"
+        value="file://$(find arm_description)/meshes//Lower_leg_left.stl" />
+    <xacro:property name="arm_module_right_front"
+        value="file://$(find arm_description)/meshes//Module_right_front.stl" />
+    <xacro:property name="arm_module_right_hind"
+        value="file://$(find arm_description)/meshes//Module_right_hind.stl" />
+    <xacro:property name="arm_module_2_right"
+        value="file://$(find arm_description)/meshes//Module_2_right.stl" />
+    <xacro:property name="arm_lower_leg_right"
+        value="file://$(find arm_description)/meshes//Lower_leg_right.stl" />
+
+    <!-- EACH MACRO CONSISTS OF THE LINK AND ITS FOLLOWING JOINT -->
+
+    <!-- MODULE -->
+    <xacro:macro name="module" params="prefix gazebo jnt_pref">
+        <!-- Transformation based on the position of each link -->
+        <xacro:if value="${prefix == 1}">
+            <xacro:property name="trasl_xyz" value="${M1_2_M2_x} ${-M1_2_M2_y} 0" />
+            <xacro:property name="rot_rpy" value="0 0 0" />
+            <xacro:property name="axis" value="0 -1 0" />
+            <xacro:property name="coll_xyz" value="0.0945 -0.015 0" />
+        </xacro:if>
+        <xacro:if value="${prefix == 2}">
+            <xacro:property name="trasl_xyz" value="0 ${-M2_2_M3_y} ${-M2_2_M3_z}" />
+            <xacro:property name="rot_rpy" value="0 ${PI/2} 0" />
+            <xacro:property name="axis" value="0 -1 0" />
+            <xacro:property name="coll_xyz" value="0 -0.015 -0.0945" />
+        </xacro:if>
+        <xacro:if
+            value="${prefix == 3}">
+            <xacro:property name="trasl_xyz" value="0 ${-M3_2_M4_y} ${-M3_2_M4_z}" />
+            <xacro:property name="rot_rpy" value="0 ${PI/2} 0" />
+            <xacro:property name="axis" value="0 -1 0" />
+            <xacro:property name="coll_xyz" value="0 -0.015 -0.0945" />
+        </xacro:if>
+
+        <!-- Link -->
+        <link name="MODULE_${prefix}">
+            <visual>
+                <material name="white" />
+                <origin xyz="0 0 0" rpy="${rot_rpy}" />
+                <geometry>
+                    <mesh filename="${arm_module_right_front}" />
+                </geometry>
+            </visual>
+
+            <collision>
+                <origin xyz="${coll_xyz}" rpy="${rot_rpy}" />
+                <geometry>
+                    <!-- <mesh filename="${arm_module_right_front}" /> -->
+                    <box size="0.269 0.057 0.060" />
+                </geometry>
+            </collision>
+
+            <inertial>
+                <mass value="0.47669673" />
+                <xacro:if value="${prefix == 1}">
+                    <origin
+                        xyz="7.2487360e-02 -3.1582591e-02 2.4812434e-03"
+                        rpy="0 0 0" />
+                    <inertia ixx="2.1574269e-04" ixy="3.3437484e-05"
+                        ixz="2.4284668e-06" iyy="3.0607390e-03"
+                        iyz="-2.0388977e-06" izz="3.0504273e-03" />
+                </xacro:if>
+                <xacro:unless value="${prefix == 1}">
+                    <origin
+                        xyz="2.4812434e-03 -3.1582591e-02 -7.2487360e-02"
+                        rpy="0 0 0" />
+                    <inertia ixx="3.0504273e-03" ixy="2.0388977e-06"
+                        ixz="-2.4284668e-06" iyy="3.0607390e-03"
+                        iyz="3.3437484e-05" izz="2.1574269e-04" />
+                </xacro:unless>
+            </inertial>
+        </link>
+        <xacro:if value="${gazebo}">
+            <gazebo reference="MODULE_${prefix}">
+                <material>Gazebo/White</material>
+                <collision>
+                    <surface>
+                        <friction>
+                            <ode>
+                                <mu>1</mu>
+                                <mu2>1</mu2>
+                                <slip1>0</slip1>
+                                <slip2>0</slip2>
+                            </ode>
+                        </friction>
+                        <contact>
+                            <ode>
+                                <kp>1000000.0</kp>
+                                <kd>100.0</kd>
+                                <min_depth>0.001</min_depth>
+                            </ode>
+                        </contact>
+                    </surface>
+                </collision>
+            </gazebo>
+        </xacro:if>
+        <!-- Module joint -->
+        <xacro:unless value="${prefix > 2}">
+            <joint name="JOINT_${prefix}" type="revolute">
+                <parent link="${jnt_pref}MODULE_${prefix}" />
+                <child link="${jnt_pref}MODULE_${prefix+1}" />
+                <origin xyz="${trasl_xyz}" rpy="0 0 0" />
+                <axis xyz="${axis}" />
+                <limit effort="2.7" lower="-${PI}" upper="${PI}" velocity="1000" />
+            </joint>
+        </xacro:unless>
+    </xacro:macro>
+
+    <!-- MODULE EE -->
+    <xacro:macro name="module_ee" params="prefix gazebo jnt_pref simplify_meshes">
+        <!-- Transformation based on the position of each link -->
+        <xacro:property name="EE_trasl_xyz" value="0 ${-M3_2_M4_y} ${-M3_2_M4_z}" />
+        <xacro:property name="axis" value="0 -1 0" />
+        <xacro:property name="EE_rot_rpy" value="0 0 0" />
+
+        <!-- Joint -->
+        <joint name="JOINT_3" type="revolute">
+            <parent link="${jnt_pref}MODULE_3" />
+            <child link="${jnt_pref}MODULE_EE" />
+            <origin xyz="${EE_trasl_xyz}" rpy="0 0 0" />
+            <axis xyz="${axis}" />
+            <limit effort="2.7" lower="-${PI}" upper="${PI}" velocity="1000" />
+        </joint>
+        <!-- EE link -->
+        <link name="MODULE_EE">
+            <visual>
+                <material name="white" />
+                <origin xyz="0 0 0" rpy="${EE_rot_rpy}" />
+                <geometry>
+                    <mesh filename="${arm_lower_leg_right}" />
+                </geometry>
+            </visual>
+            <collision name="MODULE_EE">
+                <!-- Real meshes -->
+                <xacro:unless value="${simplify_meshes}">
+                    <origin xyz="0 0 0" rpy="${EE_rot_rpy}" />
+                    <geometry>
+                        <mesh filename="${arm_lower_leg_right}" />
+                    </geometry>
+                </xacro:unless>
+                <!-- Simplified meshes -->
+                <xacro:if value="${simplify_meshes}">
+                    <origin xyz="0 -0.012 -0.096" rpy="${EE_rot_rpy}" />
+                    <geometry>
+                        <box size="0.032 0.024 0.192" />
+                    </geometry>
+                </xacro:if>
+            </collision>
+            <inertial>
+                <mass value="0.046942" />
+                <origin
+                    xyz="-1.552593e-05 -0.0198901 -0.0660893"
+                    rpy="0 0 0" />
+                <inertia ixx="0.00021154" ixy="2.702972e-09"
+                    ixz="2.468115e-08" iyy="0.00021242"
+                    iyz="1.089102e-05" izz="5.140780e-06" />
+            </inertial>
+        </link>
+        <xacro:if value="${gazebo}">
+            <gazebo reference="MODULE_EE">
+                <material>Gazebo/White</material>
+                <collision>
+                    <surface>
+                        <friction>
+                            <ode>
+                                <mu>0.6</mu>
+                                <mu2>0.6</mu2>
+                                <slip1>0</slip1>
+                                <slip2>0</slip2>
+                            </ode>
+                        </friction>
+                        <contact>
+                            <ode>
+                                <kp>10000.0</kp>
+                                <kd>100.0</kd>
+                                <min_depth>0.001</min_depth>
+                            </ode>
+                        </contact>
+                    </surface>
+                </collision>
+            </gazebo>
+        </xacro:if>
+        <joint name="WRIST" type="fixed">
+            <parent link="MODULE_EE" />
+            <child link="EE" />
+            <origin xyz="0 ${-M4_2_EE_y} ${-M4_2_EE_z}" rpy="0 0 0" />
+
+
+        </joint>
+
+        <link name="EE">
+            <xacro:if value="${simplify_meshes}">
+                <collision>
+                    <origin xyz="0 0 0" rpy="0 0 0" />
+                    <geometry>
+                        <sphere radius="0.015" />
+                    </geometry>
+                </collision>
+            </xacro:if>
+        </link>
+        <xacro:if value="${gazebo}">
+            <gazebo reference="$EE">
+                <material>Gazebo/White</material>
+                <collision>
+                    <surface>
+                        <friction>
+                            <ode>
+                                <mu>0.6</mu>
+                                <mu2>0.6</mu2>
+                                <slip1>0</slip1>
+                                <slip2>0</slip2>
+                            </ode>
+                        </friction>
+                        <contact>
+                            <ode>
+                                <kp>10000.0</kp>
+                                <kd>100.0</kd>
+                                <min_depth>0.001</min_depth>
+                            </ode>
+                        </contact>
+                    </surface>
+                </collision>
+                <sensor name="${prefix}_contactsensor_sensor" type="contact">
+                    <always_on>true</always_on>
+                    <update_rate>50</update_rate>
+                    <contact>
+                        <collision>
+                            ${prefix}_LOWER_LEG_fixed_joint_lump__${prefix}_FOOT_collision_1</collision>
+
+                    </contact>
+
+                </sensor>
+            </gazebo>
+        </xacro:if>
+    </xacro:macro>
+
+</robot>
