@@ -2,7 +2,7 @@ import os
 
 from ament_index_python.packages import get_package_share_path
 from launch import LaunchDescription
-from launch.actions import IncludeLaunchDescription
+from launch.actions import ExecuteProcess, IncludeLaunchDescription
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import Command
 from launch_ros.actions import Node
@@ -110,10 +110,23 @@ def generate_launch_description():
         output='screen',
         emulate_tty=True,
     )
+    
+    change_camera = ExecuteProcess(
+            cmd=[
+                'gz', 'service', '-s', '/gui/move_to/pose',
+                '--reqtype', 'gz.msgs.GUICamera',
+                '--reptype', 'gz.msgs.Boolean',
+                '--timeout', '2000',
+                '--req',
+                'pose: {position: {x: 0.0, y: -1.0, z: 0.5}, orientation: {x: -0.0, y: 0.0, z: 0.707, w: 0.707}}'
+            ],
+            output='screen'
+        )
 
     return LaunchDescription([
         gz,
         gz_ros_bridge,
+        change_camera,
         robot_state_publisher_node,
         spawn_arm,
         spawn_joint_state_broadcaster,
