@@ -10,35 +10,52 @@ class ControlTasks:
     def __init__(self, robot_name):
         self.robot_wrapper = RobotWrapper(robot_name)
         
-        self.q = None
-        self.v = None
+        # ============================== Sizes ============================== #
         
-        self.n_c = 2
-        self.n_q = self.robot_wrapper.nq
-        self.n_s = 3*self.n_q
-        self.n_i = self.n_q
-        self.n_x = self.n_s + self.n_i
+        self.n_c = 2                        # n control steps
+        self.n_q = self.robot_wrapper.nq    # n joint positions
+        self.n_s = 3*self.n_q               # n_states
+        self.n_i = self.n_q                 # n inputs
+        self.n_x = self.n_s + self.n_i      # n states and inputs
         
-        self.alpha = 1.0
-        self.beta = 0.1
+        # ========================= Internal States ========================= #
         
+        # Joint positions and velocities
+        self.q = np.zeros(self.n_q)
+        self.v = np.zeros(self.n_q)
+        self.temp = np.zeros(self.n_q)
+        
+        # Temperature coefficients: T_k+1 = (1 - alpha dt) T_k + beta |tau|
+        self.alpha = 0.1
+        self.beta = 0.01
+        
+        # MPC timestep size
         self.dt = 0.01
         
-        # TODO
+        # =================================================================== #
+        
+        # Previous optimal torques
+        # TODO: update at the end
         self.tau = np.zeros(self.n_q)
+        
+        # ============================== Limits ============================= #
         
         self.tau_max = 10
         self.tau_min = -10
         
         self.T_max = 10
         
-        self.k_p = 10
-        self.k_d = 1
+        # ============================== Gains ============================== #
         
-    def update(self, q, v):
+        self.k_p = 10.0
+        self.k_d = 1.0
+        
+    def update(self, q: np.ndarray, v: np.ndarray):
+        """Update the dynamic and kinematic quantities in Pinocchio."""
+        
         self.q = q
         self.v = v
-        self.robot_wrapper.forwardKinematics(self.q, self.v)
+        self.robot_wrapper.forwardKinematics(self.q, self.v, 0 * self.v)
         pin.computeJointJacobiansTimeVariation(
             self.robot_wrapper.model,
             self.robot_wrapper.data,
@@ -47,9 +64,8 @@ class ControlTasks:
         )
         
     def task_eom(self):
-        M = self.robot_wrapper.mass(self.q)
-        h = self.robot_wrapper.nle(self.q, self.v)
-        
+        """Generate the A and b matrices of the equations of motion task."""
+
         A_dyn = np.zeros((self.n_c * self.n_s, self.n_x * self.n_c))
         b_dyn = np.zeros(self.n_c * self.n_s)
         
@@ -57,7 +73,7 @@ class ControlTasks:
         
         A_dyn[0:self.n_s, self._id_ui(0)] = B
         A_dyn[0:self.n_s, self._id_si(1)] = - np.eye(self.n_s)
-        b_dyn[0:self.n_s] = A @ np.concatenate([self.q, self.v, self.tau]) - f
+        b_dyn[0:self.n_s] = - A @ np.concatenate([self.q, self.v, self.temp]) - f
         
         for i in range(1, self.n_c):
             A_dyn[i*self.n_s:(i+1)*self.n_s, self._id_si(i)] = A
@@ -77,7 +93,7 @@ class ControlTasks:
         
         B = np.zeros((self.n_s, self.n_q))
         B[self.n_q:2*self.n_q, 0:self.n_q] = pinv(M) * self.dt
-        B[2*self.n_q:3*self.n_q] = self.beta * self.dt * np.sign(self.tau)
+        B[2*self.n_q:3*self.n_q] = self.beta * self.dt * np.sign(self.tau) * np.eye(self.n_q)
         
         f = np.zeros(self.n_s)
         f[self.n_q:2*self.n_q] = - pinv(M) @ h * self.dt
@@ -107,6 +123,8 @@ class ControlTasks:
         return C, d
             
     def task_motion_ref(self, p_ref, v_ref, a_ref):
+        # Only the first two components are controllable in a planar manipulator.
+        
         id_ee = self.robot_wrapper.model.getFrameId(self.robot_wrapper.ee_name)
         
         M = self.robot_wrapper.mass(self.q)
@@ -115,7 +133,7 @@ class ControlTasks:
         J_ee = self.robot_wrapper.getFrameJacobian(id_ee, rf_frame=pin.LOCAL_WORLD_ALIGNED)
         J_ee = J_ee[0:3, :]
         
-        self.pos_ee = self.robot_wrapper.framePlacement(self.q, id_ee).translation
+        pos_ee = self.robot_wrapper.framePlacement(self.q, id_ee).translation
         
         J_ee_dot_times_v = pin.getFrameClassicalAcceleration(
             self.robot_wrapper.model,
@@ -126,13 +144,23 @@ class ControlTasks:
         
         A = np.zeros((3, self.n_x * self.n_c))
         A[0:3, self._id_ui(0)] = J_ee @ pinv(M)
-        A[0:3, self._id_vi(1)] = self.k_p * J_ee
+        # A[0:3, self._id_qi(1)] = self.k_p * J_ee
+        # A[0:3, self._id_vi(1)] = self.k_d * J_ee
         
         b = - J_ee_dot_times_v \
             + J_ee @ pinv(M) @ h \
-            + a_ref \
-            + self.k_d * (v_ref - J_ee @ self.q) \
-            + self.k_p * (p_ref - self.pos_ee)
+            + self.k_d * (v_ref - J_ee @ self.v) \
+            + self.k_p * (p_ref - pos_ee)
+            
+        return A, b
+    
+    def task_min_torques(self):
+        A = np.zeros((self.n_c * self.n_i, self.n_x * self.n_c))
+        b = np.zeros(self.n_c * self.n_i)
+        
+        for i in range(self.n_c):
+            A[i*self.n_i:(i+1)*self.n_i, self._id_ui(i)] = np.eye(self.n_i)
+            b[i*self.n_i:(i+1)*self.n_i] = np.zeros(self.n_i)
             
         return A, b
         

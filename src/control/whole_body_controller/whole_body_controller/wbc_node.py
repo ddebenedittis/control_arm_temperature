@@ -29,7 +29,7 @@ class WBCController(Node):
         
         # ============================== Timer ============================== #
         
-        self.timer_period = 0.01
+        self.timer_period = 0.0025
         self.timer = self.create_timer(self.timer_period, self.timer_callback)
         
         # ======================== Internal Variables ======================= #
@@ -49,7 +49,7 @@ class WBCController(Node):
             self.joint_velocities[idx] = msg.velocity[i]
             
     def timer_callback(self):
-        p_ref = np.array([0.19, -0.16, -0.4])
+        p_ref = np.array([0.30, -0.16, -0.4])
         v_ref = np.zeros(3)
         a_ref = np.zeros(3)
         
@@ -57,6 +57,8 @@ class WBCController(Node):
             self.joint_positions, self.joint_velocities,
             p_ref, v_ref, a_ref
         )
+        
+        # print(tau_opt)
         
         msg = Float64MultiArray()
         msg.data = tau_opt.tolist()
