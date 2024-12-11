@@ -7,7 +7,7 @@ class WholeBodyController:
         self.control_tasks = ControlTasks(robot_name)
         
         self.hqp = HierarchicalQP()
-        self.hqp.regularization = 1e-6
+        self.hqp.regularization = 1e-4
         
     def update(self, q, v, temp):
         self.control_tasks.update(q, v, temp)
@@ -49,7 +49,7 @@ class WholeBodyController:
         C.append(None)
         d.append(None)
         
-        A_min, b_min = self.control_tasks.task_min_torques()
+        A_min, b_min = self.control_tasks.task_min_torques_qdot()
         A.append(A_min)
         b.append(b_min)
         C.append(None)

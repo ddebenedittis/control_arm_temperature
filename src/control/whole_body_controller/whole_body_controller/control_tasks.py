@@ -44,8 +44,8 @@ class ControlTasks:
         
         self.tau_max = 10
         self.tau_min = -10
-        self.delta_tau_max =  10.0 * self.Ts
-        self.delta_tau_min = -10.0 * self.Ts
+        self.delta_tau_max =  5.0 * self.Ts
+        self.delta_tau_min = -5.0 * self.Ts
         
         self.T_max = 40
         
@@ -171,13 +171,16 @@ class ControlTasks:
             
         return A, b
     
-    def task_min_torques(self):
-        A = np.zeros((self.n_c * self.n_i, self.n_x * self.n_c))
-        b = np.zeros(self.n_c * self.n_i)
+    def task_min_torques_qdot(self):
+        A = np.zeros((self.n_c * self.n_i + self.n_q * self.n_c, self.n_x * self.n_c))
+        b = np.zeros(self.n_c * self.n_i + self.n_q * self.n_c)
         
+        off = self.n_i * self.n_c
         for i in range(self.n_c):
             A[i*self.n_i:(i+1)*self.n_i, self._id_ui(i)] = np.eye(self.n_i)
             b[i*self.n_i:(i+1)*self.n_i] = np.zeros(self.n_i)
+            A[off+i*self.n_q:off+(i+1)*self.n_q, self._id_vi(i+1)] = np.eye(self.n_i)
+            b[off+i*self.n_q:off+(i+1)*self.n_q] = np.zeros(self.n_i)
             
         return A, b
         
