@@ -9,11 +9,14 @@ class WholeBodyController:
         self.hqp = HierarchicalQP()
         self.hqp.regularization = 1e-6
         
-    def update(self, q, v):
-        self.control_tasks.update(q, v)
+    def update(self, q, v, temp):
+        self.control_tasks.update(q, v, temp)
         
-    def __call__(self, q, v, pos_ref, vel_ref, acc_ref):
-        self.update(q, v)
+    def __call__(
+        self,
+        q, v, temp,
+        pos_ref, vel_ref, acc_ref):
+        self.update(q, v, temp)
         
         A = []
         b = []
@@ -32,11 +35,11 @@ class WholeBodyController:
         C.append(C_torque)
         d.append(d_torque)
         
-        # C_temp, d_temp = self.control_tasks.task_temperature_limits()
-        # A.append(None)
-        # b.append(None)
-        # C.append(C_temp)
-        # d.append(d_temp)
+        C_temp, d_temp = self.control_tasks.task_temperature_limits()
+        A.append(None)
+        b.append(None)
+        C.append(C_temp)
+        d.append(d_temp)
         
         A_ref, b_ref = self.control_tasks.task_motion_ref(
             pos_ref, vel_ref, acc_ref
@@ -55,5 +58,7 @@ class WholeBodyController:
         sol = self.hqp(A, b, C, d)
         
         tau_opt = sol[0:self.control_tasks.n_q]
+        
+        self.control_tasks.tau = tau_opt
         
         return tau_opt

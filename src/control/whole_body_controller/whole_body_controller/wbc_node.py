@@ -15,11 +15,20 @@ class WBCController(Node):
         
         self.wbc = WholeBodyController('arm')
         
+        # =========================== Subscribers =========================== #
+        
         self.joint_states_subscription = self.create_subscription(
             JointState,
             "joint_states",
             self.joint_states_callback,
-            1
+            1,
+        )
+        
+        self.temperature_subscription = self.create_subscription(
+            Float64MultiArray,
+            '/joint_states/temperature',
+            self.temperature_callback,
+            1,
         )
         
         # ============================ Publishers =========================== #
@@ -36,6 +45,7 @@ class WBCController(Node):
         
         self.joint_positions = np.zeros(self.wbc.control_tasks.robot_wrapper.nq)
         self.joint_velocities = np.zeros(self.wbc.control_tasks.robot_wrapper.nv)
+        self.temp = np.ones(self.wbc.control_tasks.robot_wrapper.nq) * 25
         
     def joint_states_callback(self, msg: JointState):
         self.joint_positions = np.array(msg.position)
@@ -48,17 +58,18 @@ class WBCController(Node):
             self.joint_positions[idx] = msg.position[i]
             self.joint_velocities[idx] = msg.velocity[i]
             
+    def temperature_callback(self, msg: Float64MultiArray):
+        self.temp = np.array(msg.data)
+            
     def timer_callback(self):
         p_ref = np.array([0.30, -0.16, -0.4])
         v_ref = np.zeros(3)
         a_ref = np.zeros(3)
         
         tau_opt = self.wbc(
-            self.joint_positions, self.joint_velocities,
+            self.joint_positions, self.joint_velocities, self.temp,
             p_ref, v_ref, a_ref
         )
-        
-        # print(tau_opt)
         
         msg = Float64MultiArray()
         msg.data = tau_opt.tolist()

@@ -28,9 +28,11 @@ class ControlTasks:
         # Temperature coefficients: T_k+1 = (1 - alpha dt) T_k + beta |tau|
         self.alpha = 0.1
         self.beta = 0.01
+        self.T_0 = np.ones(self.n_q) * 25
         
         # MPC timestep size
         self.dt = 0.01
+        self.Ts = 0.001
         
         # =================================================================== #
         
@@ -42,19 +44,22 @@ class ControlTasks:
         
         self.tau_max = 10
         self.tau_min = -10
+        self.delta_tau_max =  10.0 * self.Ts
+        self.delta_tau_min = -10.0 * self.Ts
         
-        self.T_max = 10
+        self.T_max = 40
         
         # ============================== Gains ============================== #
         
         self.k_p = 10.0
-        self.k_d = 1.0
+        self.k_d = 10.0
         
-    def update(self, q: np.ndarray, v: np.ndarray):
+    def update(self, q: np.ndarray, v: np.ndarray, temp: np.ndarray):
         """Update the dynamic and kinematic quantities in Pinocchio."""
         
         self.q = q
         self.v = v
+        self.temp = temp
         self.robot_wrapper.forwardKinematics(self.q, self.v, 0 * self.v)
         pin.computeJointJacobiansTimeVariation(
             self.robot_wrapper.model,
@@ -97,18 +102,30 @@ class ControlTasks:
         
         f = np.zeros(self.n_s)
         f[self.n_q:2*self.n_q] = - pinv(M) @ h * self.dt
+        f[2*self.n_q:3*self.n_q] = self.alpha * self.dt * self.T_0
         
         return A, B, f
     
     def task_torque_limits(self):
-        C = np.zeros((2 * self.n_c * self.n_i, self.n_x * self.n_c))
-        d = np.zeros(2 * self.n_c * self.n_i)
+        """Implement the torque limits task."""
         
+        C = np.zeros((4 * self.n_c * self.n_i, self.n_x * self.n_c))
+        d = np.zeros(4 * self.n_c * self.n_i)
+        
+        # Limit the maximum torques
         for i in range(self.n_c):
             C[2*i*self.n_i:(2*i+1)*self.n_i, self._id_ui(i)] = np.eye(self.n_i)
             C[(2*i+1)*self.n_i:(2*i+2)*self.n_i, self._id_ui(i)] = - np.eye(self.n_i)
             d[2*i*self.n_i:(2*i+1)*self.n_i] = self.tau_max
             d[(2*i+1)*self.n_i:(2*i+2)*self.n_i] = - self.tau_min
+            
+        # Limit the maximum torques variation w.r.t. the previous timestep
+        off = 2*self.n_c*self.n_i
+        for i in range(self.n_c):
+            C[off+2*i*self.n_i:off+(2*i+1)*self.n_i, self._id_ui(i)] = np.eye(self.n_i)
+            C[off+(2*i+1)*self.n_i:off+(2*i+2)*self.n_i, self._id_ui(i)] = - np.eye(self.n_i)
+            d[off+2*i*self.n_i:off+(2*i+1)*self.n_i] = self.delta_tau_max + self.tau
+            d[off+(2*i+1)*self.n_i:off+(2*i+2)*self.n_i] = - self.delta_tau_min - self.tau
             
         return C, d
             

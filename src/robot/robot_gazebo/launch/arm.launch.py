@@ -102,6 +102,14 @@ def generate_launch_description():
         output='screen',
         emulate_tty=True,
     )
+    
+    spawn_temperature_node = Node(
+        package="whole_body_controller",
+        executable="temperature_node",
+        parameters=[{'use_sim_time': True}],
+        output='screen',
+        emulate_tty=True,
+    )
 
     return LaunchDescription([
         gz,
@@ -111,4 +119,5 @@ def generate_launch_description():
         spawn_joint_state_broadcaster,
         spawn_effort_controller,
         spawn_controller,
+        spawn_temperature_node,
     ])
