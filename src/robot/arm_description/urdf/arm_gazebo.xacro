@@ -21,9 +21,9 @@
             <plugin>gz_ros2_control/GazeboSimSystem</plugin>
         </hardware>
 
-        <xacro:ros2_control_joint joint_name="JOINT_1" effort_lim="10" initial_value="0.1"></xacro:ros2_control_joint>
-        <xacro:ros2_control_joint joint_name="JOINT_2" effort_lim="10" initial_value="0.2"></xacro:ros2_control_joint>
-        <xacro:ros2_control_joint joint_name="JOINT_3" effort_lim="10" initial_value="0.3"></xacro:ros2_control_joint>
+        <xacro:ros2_control_joint joint_name="JOINT_1" effort_lim="10" initial_value="0.0"></xacro:ros2_control_joint>
+        <xacro:ros2_control_joint joint_name="JOINT_2" effort_lim="10" initial_value="0.0"></xacro:ros2_control_joint>
+        <xacro:ros2_control_joint joint_name="JOINT_3" effort_lim="10" initial_value="0.0"></xacro:ros2_control_joint>
     </ros2_control>
 
     <gazebo>
