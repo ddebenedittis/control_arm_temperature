@@ -159,15 +159,27 @@ class ControlTasks:
             pin.ReferenceFrame.LOCAL_WORLD_ALIGNED,
         ).linear
         
-        A = np.zeros((3, self.n_x * self.n_c))
-        A[0:3, self._id_ui(0)] = J_ee @ pinv(M)
-        # A[0:3, self._id_qi(1)] = self.k_p * J_ee
-        # A[0:3, self._id_vi(1)] = self.k_d * J_ee
+        A = np.zeros((3*self.n_c, self.n_x * self.n_c))
+        b = np.zeros(3*self.n_c)
         
-        b = - J_ee_dot_times_v \
+        A[0:3, self._id_ui(0)] = J_ee @ pinv(M)
+        
+        b[0:3] = - J_ee_dot_times_v \
             + J_ee @ pinv(M) @ h \
+            + a_ref \
             + self.k_d * (v_ref - J_ee @ self.v) \
             + self.k_p * (p_ref - pos_ee)
+            
+        for i in range(1, self.n_c):
+            A[3*i:3*(i+1), self._id_ui(i)] = J_ee @ pinv(M)
+            A[3*i:3*(i+1), self._id_qi(i)] = self.k_p * J_ee
+            A[3*i:3*(i+1), self._id_vi(i)] = self.k_d * J_ee
+            
+            b[3*i:3*(i+1)] = - J_ee_dot_times_v \
+                + J_ee @ pinv(M) @ h \
+                + a_ref \
+                + self.k_d * v_ref \
+                + self.k_p * (p_ref - pos_ee - J_ee @ self.q)
             
         return A, b
     
