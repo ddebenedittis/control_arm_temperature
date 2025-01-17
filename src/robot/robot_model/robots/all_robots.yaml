@@ -15,3 +15,15 @@ arm:
         - JOINT_1
         - JOINT_2
         - JOINT_3
+
+# =================================== Leg =================================== #
+
+leg:
+    pkg_name: arm_description
+    urdf_path: /urdf/leg.urdf
+    base_name: MODULE_2
+    ee_name: EE
+    ordered_joint_names:
+        - JOINT_1
+        - JOINT_2
+        - JOINT_3

@@ -21,6 +21,7 @@ setup(
     entry_points={
         'console_scripts': [
             'wbc_node = whole_body_controller.wbc_node:main',
+            'wbc_leg_node = whole_body_controller.wbc_leg_node:main',
             'temperature_node = whole_body_controller.temperature_node:main',
         ],
     },

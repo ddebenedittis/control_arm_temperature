@@ -1,10 +1,10 @@
 from hierarchical_qp.hierarchical_qp import HierarchicalQP
-from whole_body_controller.control_tasks import ControlTasks
+from whole_body_controller.control_tasks_leg import ControlTasksLeg
 
 
 class WholeBodyController:
     def __init__(self, robot_name):
-        self.control_tasks = ControlTasks(robot_name)
+        self.control_tasks = ControlTasksLeg(robot_name)
         self.control_tasks.n_c = 5
         self.control_tasks.dt = 0.25
         
@@ -17,7 +17,8 @@ class WholeBodyController:
     def __call__(
         self,
         q, v, temp,
-        pos_ref, vel_ref, acc_ref):
+        h_ref, h_d_ref, h_dd_ref
+    ):
         self.update(q, v, temp)
         
         A = []
@@ -37,6 +38,18 @@ class WholeBodyController:
         C.append(C_torque)
         d.append(d_torque)
         
+        C_force, d_force = self.control_tasks.task_force_limits()
+        A.append(None)
+        b.append(None)
+        C.append(C_force)
+        d.append(d_force)
+        
+        A_contact, b_contact = self.control_tasks.task_rigid_contact()
+        A.append(A_contact)
+        b.append(b_contact)
+        C.append(None)
+        d.append(None)
+        
         C_temp, d_temp = self.control_tasks.task_temperature_limits()
         A.append(None)
         b.append(None)
@@ -44,7 +57,7 @@ class WholeBodyController:
         d.append(d_temp)
         
         A_ref, b_ref = self.control_tasks.task_motion_ref(
-            pos_ref, vel_ref, acc_ref
+            h_ref, h_d_ref, h_dd_ref
         )
         A.append(A_ref)
         b.append(b_ref)
@@ -59,7 +72,7 @@ class WholeBodyController:
         
         sol = self.hqp(A, b, C, d)
         
-        tau_opt = sol[0:self.control_tasks.n_q]
+        tau_opt = sol[0:self.control_tasks.n_qj]
         
         self.control_tasks.tau = tau_opt
         
