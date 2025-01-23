@@ -192,8 +192,8 @@ class ControlTasks:
         for i in range(self.n_c):
             A[i*self.n_i:(i+1)*self.n_i, self._id_ui(i)] = np.eye(self.n_i)
             b[i*self.n_i:(i+1)*self.n_i] = np.zeros(self.n_i)
-            A[off+i*self.n_q:off+(i+1)*self.n_q, self._id_vi(i+1)] = np.eye(self.n_i)
-            b[off+i*self.n_q:off+(i+1)*self.n_q] = np.zeros(self.n_i)
+            A[off+i*self.n_q:off+(i+1)*self.n_q, self._id_vi(i+1)] = np.eye(self.n_q)
+            b[off+i*self.n_q:off+(i+1)*self.n_q] = np.zeros(self.n_q)
             
         return A, b
         

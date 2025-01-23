@@ -110,16 +110,16 @@ class ControlTasksLeg:
         
         A = np.eye(self.n_s)
         A[0:self.n_q, self.n_q:2*self.n_q] = np.eye(self.n_q) * self.dt
-        A[2*self.n_q:3*self.n_q, 2*self.n_q:3*self.n_q] = (1 - self.alpha * self.dt) * np.eye(self.n_q)
+        A[2*self.n_q:2*self.n_q+self.n_qj, 2*self.n_q:2*self.n_q+self.n_qj] = (1 - self.alpha * self.dt) * np.eye(self.n_qj)
         
         B = np.zeros((self.n_s, self.n_i))
         B[self.n_q:2*self.n_q, 0:self.n_tau] = pinv(M) @ S.T * self.dt
         B[self.n_q:2*self.n_q, self.n_tau:self.n_tau+self.n_f] = pinv(M) @ J_c.T * self.dt
-        B[2*self.n_q:3*self.n_q, 0:self.n_tau] = self.beta * self.dt * np.sign(self.tau) * np.eye(self.n_q)
+        B[2*self.n_q:2*self.n_q+self.n_qj, 0:self.n_tau] = self.beta * self.dt * np.sign(self.tau) * np.eye(self.n_qj)
         
         f = np.zeros(self.n_s)
         f[self.n_q:2*self.n_q] = - pinv(M) @ h * self.dt
-        f[2*self.n_q:3*self.n_q] = self.alpha * self.dt * self.T_0
+        f[2*self.n_q:2*self.n_q+self.n_qj] = self.alpha * self.dt * self.T_0
         
         return A, B, f
     
@@ -131,16 +131,16 @@ class ControlTasksLeg:
         
         # Limit the maximum torques
         for i in range(self.n_c):
-            C[2*i*self.n_tau:(2*i+1)*self.n_tau, self._id_ui(i)] = np.eye(self.n_tau)
-            C[(2*i+1)*self.n_tau:(2*i+2)*self.n_tau, self._id_ui(i)] = - np.eye(self.n_tau)
+            C[2*i*self.n_tau:(2*i+1)*self.n_tau, self._id_taui(i)] = np.eye(self.n_tau)
+            C[(2*i+1)*self.n_tau:(2*i+2)*self.n_tau, self._id_taui(i)] = - np.eye(self.n_tau)
             d[2*i*self.n_tau:(2*i+1)*self.n_tau] = self.tau_max
             d[(2*i+1)*self.n_tau:(2*i+2)*self.n_tau] = - self.tau_min
             
         # Limit the maximum torques variation w.r.t. the previous timestep
         off = 2*self.n_c*self.n_tau
         for i in range(self.n_c):
-            C[off+2*i*self.n_tau:off+(2*i+1)*self.n_tau, self._id_ui(i)] = np.eye(self.n_tau)
-            C[off+(2*i+1)*self.n_tau:off+(2*i+2)*self.n_tau, self._id_ui(i)] = - np.eye(self.n_tau)
+            C[off+2*i*self.n_tau:off+(2*i+1)*self.n_tau, self._id_taui(i)] = np.eye(self.n_tau)
+            C[off+(2*i+1)*self.n_tau:off+(2*i+2)*self.n_tau, self._id_taui(i)] = - np.eye(self.n_tau)
             d[off+2*i*self.n_tau:off+(2*i+1)*self.n_tau] = self.delta_tau_max + self.tau
             d[off+(2*i+1)*self.n_tau:off+(2*i+2)*self.n_tau] = - self.delta_tau_min - self.tau
             
@@ -180,6 +180,7 @@ class ControlTasksLeg:
         
         id_ee = self.robot_wrapper.model.getFrameId(self.robot_wrapper.ee_name)
         J_c = self.robot_wrapper.getFrameJacobian(id_ee, rf_frame=pin.LOCAL_WORLD_ALIGNED)
+        J_c = J_c[0:3, :]
         
         A = np.zeros((self.n_f * self.n_c, self.n_x * self.n_c))
         b = np.zeros(self.n_f * self.n_c)
@@ -193,12 +194,20 @@ class ControlTasksLeg:
         # Only the first two components are controllable in a planar manipulator.
         
         id_base = self.robot_wrapper.model.getFrameId(self.robot_wrapper.base_name)
+        id_ee = self.robot_wrapper.model.getFrameId(self.robot_wrapper.ee_name)
         
         M = self.robot_wrapper.mass(self.q)
         h = self.robot_wrapper.nle(self.q, self.v)
         
+        S = np.hstack((
+            np.zeros((self.n_qj, self.n_qb)),
+            np.eye(self.n_qj),
+        ))
+        
         J_base = self.robot_wrapper.getFrameJacobian(id_base, rf_frame=pin.LOCAL_WORLD_ALIGNED)
         J_base = J_base[2:3, :]     # Only the linear z component.
+        J_c = self.robot_wrapper.getFrameJacobian(id_ee, rf_frame=pin.LOCAL_WORLD_ALIGNED)
+        J_c = J_c[0:3, :]
         
         pos_base = self.robot_wrapper.framePlacement(self.q, id_base).translation
         h_base = pos_base[2]
@@ -215,16 +224,20 @@ class ControlTasksLeg:
         b = np.zeros(1*self.n_c)
         
         n = 1
-        A[0:n, self._id_ui(0)] = J_base @ pinv(M)
+        A[0:n, self._id_taui(0)] = J_base @ pinv(M) @ S.T
+        A[0:n, self._id_fi(0)] = J_base @ pinv(M) @ J_c.T
+        A[0:n, self._id_qi(1)] = self.k_p * J_base
+        A[0:n, self._id_vi(1)] = self.k_d * J_base
         
         b[0:n] = - J_base_dot_times_v \
             + J_base @ pinv(M) @ h \
             + h_dd_ref \
-            + self.k_d * (h_d_ref - J_base @ self.v) \
-            + self.k_p * (h_ref - pos_base)
+            + self.k_d * h_d_ref \
+            + self.k_p * (h_ref - h_base)
         
         for i in range(1, self.n_c):
-            A[n*i:n*(i+1), self._id_ui(i)] = J_base @ pinv(M)
+            A[n*i:n*(i+1), self._id_taui(i)] = J_base @ pinv(M) @ S.T
+            A[n*i:n*(i+1), self._id_fi(i)] = J_base @ pinv(M) @ J_c.T
             A[n*i:n*(i+1), self._id_qi(i)] = self.k_p * J_base
             A[n*i:n*(i+1), self._id_vi(i)] = self.k_d * J_base
             
@@ -232,7 +245,7 @@ class ControlTasksLeg:
                 + J_base @ pinv(M) @ h \
                 + h_dd_ref \
                 + self.k_d * h_d_ref \
-                + self.k_p * (h_ref - pos_base - J_base @ self.q)
+                + self.k_p * (h_ref - h_base)
             
         return A, b
     
@@ -242,10 +255,10 @@ class ControlTasksLeg:
         
         off = self.n_tau * self.n_c
         for i in range(self.n_c):
-            A[i*self.n_tau:(i+1)*self.n_tau, self._id_ui(i)] = np.eye(self.n_tau)
+            A[i*self.n_tau:(i+1)*self.n_tau, self._id_taui(i)] = np.eye(self.n_tau)
             b[i*self.n_tau:(i+1)*self.n_tau] = np.zeros(self.n_tau)
-            A[off+i*self.n_q:off+(i+1)*self.n_q, self._id_vi(i+1)] = np.eye(self.n_i)
-            b[off+i*self.n_q:off+(i+1)*self.n_q] = np.zeros(self.n_i)
+            A[off+i*self.n_q:off+(i+1)*self.n_q, self._id_vi(i+1)] = np.eye(self.n_q)
+            b[off+i*self.n_q:off+(i+1)*self.n_q] = np.zeros(self.n_q)
             
         return A, b
         
