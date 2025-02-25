@@ -5,6 +5,7 @@ from rclpy.node import Node
 
 from sensor_msgs.msg import JointState
 from std_msgs.msg import Float64MultiArray
+from tf2_msgs.msg import TFMessage
 
 from whole_body_controller.whole_body_controller_leg import WholeBodyController
 
@@ -16,6 +17,13 @@ class WBCController(Node):
         self.wbc = WholeBodyController('leg')
         
         # =========================== Subscribers =========================== #
+        
+        self.height_subscription = self.create_subscription(
+            TFMessage,
+            "/tf",
+            self.height_callback,
+            1,
+        )
         
         self.joint_states_subscription = self.create_subscription(
             JointState,
@@ -47,6 +55,19 @@ class WBCController(Node):
         self.generalized_velocities = np.zeros(self.wbc.control_tasks.n_q)
         self.temp = np.ones(self.wbc.control_tasks.n_qj) * 25
         
+    def height_callback(self, msg: TFMessage):
+        for transform in msg.transforms:
+            if transform.child_frame_id == 'leg/base_link':
+                h = transform.transform.translation.z
+                h_dot = 0
+                break
+        else:
+            h = 0
+            h_dot = 0
+        
+        self.generalized_coordinates[0] = h
+        self.generalized_coordinates[1] = h_dot
+        
     def joint_states_callback(self, msg: JointState):
         joint_positions = np.array(msg.position)
         joint_velocities = np.array(msg.velocity)
@@ -65,9 +86,9 @@ class WBCController(Node):
         self.temp = np.array(msg.data)
             
     def timer_callback(self):
-        h_ref = np.array([0.4])
-        h_d_ref = np.zeros(1)
-        h_dd_ref = np.zeros(1)
+        h_ref = 0.4
+        h_d_ref = 0
+        h_dd_ref = 0
         
         tau_opt = self.wbc(
             self.generalized_coordinates, self.generalized_velocities, self.temp,
