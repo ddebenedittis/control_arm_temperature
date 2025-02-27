@@ -2,3 +2,7 @@
 	path = src/control/hierarchical_qp
 	url = git@github.com:ddebenedittis/hierarchical_qp.git
 	branch = ros2
+[submodule "src/rviz_legged"]
+	path = src/rviz_legged
+	url = git@github.com:ddebenedittis/rviz_legged.git
+	branch = jazzy
