@@ -13,12 +13,12 @@
     <xacro:property name="joint_3" value="0.0" />
 
     <link name="world_link">
-        <visual>
+        <!-- <visual>
             <material name="white" />
             <geometry>
                 <box size="10 10 0.01" />
             </geometry>
-        </visual>
+        </visual> -->
         <collision>
             <geometry>
                 <box size="10 10 0.01" />

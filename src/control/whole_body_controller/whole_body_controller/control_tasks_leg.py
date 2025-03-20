@@ -96,6 +96,32 @@ class ControlTasksLeg:
         return A_dyn, b_dyn
         
     def _compute_dyn_matrices(self):
+        """
+        Compute the matrices A, B, and f for the equations of motion task.
+        
+        Dynamics:
+            M q_ddot + h = S^T tau + J_c^T f
+            
+        Task:
+            q_{k+1} = q_k + v_k dt
+            v_{k+1} = v_k + M_k^{-1} (S^T tau_k + J_c^T f_k - h_k) dt
+            
+        Matrices:
+            x_{k+1} = A x_k + B u_k + f
+        where:
+            x = [q, v, T],
+            u = [tau, f],
+            A = [I, dt*I,                0]
+                [0,    I,                0]
+                [0,    0, (1 - alpha dt) I],
+            B = [0,   S^T,         0]
+                [0, J_c^T,         0]
+                [0,     0, beta dt I]
+            f = [0]
+                [-M^{-1} h dt]
+                [alpha dt T_0]
+        """
+        
         M = self.robot_wrapper.mass(self.q)
         h = self.robot_wrapper.nle(self.q, self.v)
         
@@ -209,8 +235,7 @@ class ControlTasksLeg:
         J_c = self.robot_wrapper.getFrameJacobian(id_ee, rf_frame=pin.LOCAL_WORLD_ALIGNED)
         J_c = J_c[0:3, :]
         
-        pos_base = self.robot_wrapper.framePlacement(self.q, id_base).translation
-        h_base = pos_base[2]
+        h_base = self.q[0]
         
         J_base_dot_times_v = pin.getFrameClassicalAcceleration(
             self.robot_wrapper.model,
