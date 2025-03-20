@@ -2,11 +2,13 @@ import os
 
 from ament_index_python.packages import get_package_share_path
 from launch import LaunchDescription
-from launch.actions import ExecuteProcess, IncludeLaunchDescription
+from launch.actions import DeclareLaunchArgument, ExecuteProcess, IncludeLaunchDescription
+from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
-from launch.substitutions import Command
+from launch.substitutions import Command, LaunchConfiguration, PathJoinSubstitution
 from launch_ros.actions import Node
 from launch_ros.parameter_descriptions import ParameterValue
+from launch_ros.substitutions import FindPackageShare
 
 
 def generate_launch_description():
@@ -122,8 +124,31 @@ def generate_launch_description():
             ],
             output='screen'
         )
+    
+    # ======================================================================= #
+    
+    use_rviz = LaunchConfiguration('rviz', default='False')
+    
+    rviz_config_file = LaunchConfiguration('rviz_config_file', default='rviz_leg.rviz')
+    rviz_config_file_path = PathJoinSubstitution([
+        FindPackageShare('robot_gazebo'),
+        'config',
+        rviz_config_file
+    ])
+    
+    rviz2 = Node(
+        condition=IfCondition(use_rviz),
+        package='rviz2',
+        executable='rviz2',
+        name='rviz2',
+        parameters=[{'use_sim_time': True}],
+        arguments=['-d', rviz_config_file_path],
+    )
+    
+    # ======================================================================= #
 
     return LaunchDescription([
+        DeclareLaunchArgument('use_rviz', default_value='False'),
         gz,
         gz_ros_bridge,
         change_camera,
@@ -133,4 +158,5 @@ def generate_launch_description():
         spawn_effort_controller,
         spawn_controller,
         spawn_temperature_node,
+        rviz2,
     ])

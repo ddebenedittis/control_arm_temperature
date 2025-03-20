@@ -5,7 +5,7 @@ from whole_body_controller.control_tasks_leg import ControlTasksLeg
 class WholeBodyController:
     def __init__(self, robot_name):
         self.control_tasks = ControlTasksLeg(robot_name)
-        self.control_tasks.n_c = 5
+        self.control_tasks.n_c = 1
         self.control_tasks.dt = 0.25
         
         self.hqp = HierarchicalQP()
@@ -72,8 +72,12 @@ class WholeBodyController:
         
         sol = self.hqp(A, b, C, d)
         
-        tau_opt = sol[0:self.control_tasks.n_qj]
+        n_qj = self.control_tasks.n_qj
+        n_f = self.control_tasks.n_f
+        
+        tau_opt = sol[0:n_qj]
+        f_opt = sol[n_qj:n_qj+n_f]
         
         self.control_tasks.tau = tau_opt
         
-        return tau_opt
+        return tau_opt, f_opt

@@ -34,6 +34,8 @@ colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release -DCMAKE_E
 
 ## Usage
 
+Optional arguments are enclosed within square brackets, i.e. `[]`; for multiple option arguments, the available options are enumerated within curly brackets, i.e. `{}`.
+
 Run the arm simulation with
 ```bash
 ros2 launch robot_gazebo arm.launch.py
@@ -43,8 +45,11 @@ ros2 launch robot_gazebo arm.launch.py
 
 Run the leg simulation with
 ```bash
-ros2 launch robot_gazebo leg.launch.py
+ros2 launch robot_gazebo leg.launch.py [rviz:={False,True}]
 ```
+Where:
+- `rviz`: run RViz2 to visualize the robot and the contact forces.
+
 
 ## Author
 

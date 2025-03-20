@@ -13,7 +13,7 @@ find_package(ament_cmake REQUIRED)
 
 # ============================ Install Directories =============================
 
-install(DIRECTORY launch params worlds DESTINATION share/${PROJECT_NAME})
+install(DIRECTORY config launch params worlds DESTINATION share/${PROJECT_NAME})
 
 # =============================================================================
 
