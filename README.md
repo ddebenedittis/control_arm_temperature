@@ -1,8 +1,8 @@
 # Control Arm Temperature
 
 Implementation of a temperature-aware controller for robotic systems.
-It builds upon Hierarchical Optimization, a method that allows to solve multiple prioritized tasks while respecting the tasks' priorities.
-For references on Hierarchical Optimization, take a look at [Soft Bilinear Inverted Pendulum: A Model to Enable Locomotion With Soft Contacts](https://ieeexplore.ieee.org/document/10777856) or [Prioritized optimization for task-space control](https://ieeexplore.ieee.org/abstract/document/5354341).
+It builds upon Hierarchical Quadratic Programming, a method that allows to solve multiple prioritized tasks while respecting the tasks' priorities.
+For references on Hierarchical Quadratic Programming, take a look at [Soft Bilinear Inverted Pendulum: A Model to Enable Locomotion With Soft Contacts](https://ieeexplore.ieee.org/document/10777856) or [Prioritized optimization for task-space control](https://ieeexplore.ieee.org/abstract/document/5354341).
 
 ## Installation with Docker
 
@@ -36,12 +36,16 @@ colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release -DCMAKE_E
 
 Optional arguments are enclosed within square brackets, i.e. `[]`; for multiple option arguments, the available options are enumerated within curly brackets, i.e. `{}`.
 
+### Arm
+
 Run the arm simulation with
 ```bash
 ros2 launch robot_gazebo arm.launch.py
 ```
 
 <img src="https://raw.githubusercontent.com/ddebenedittis/media/main/control_arm_temperature/arm.webp" width="500">
+
+### Leg
 
 Run the leg simulation with
 ```bash
