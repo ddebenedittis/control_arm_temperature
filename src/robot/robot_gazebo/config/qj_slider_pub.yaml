@@ -1,0 +1,17 @@
+/position_controller/commands:
+    type: std_msgs/Float64MultiArray
+    q0:
+        min: -3.14
+        max: 3.14
+        default: -0.6
+        to: data[0]
+    q1: 
+        min: -3.14
+        max: 3.14
+        default: 0.6
+        to: data[1]
+    q2:
+        min: -3.14
+        max: 3.14
+        default: 0.6
+        to: data[2]

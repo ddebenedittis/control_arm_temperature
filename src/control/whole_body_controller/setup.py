@@ -20,6 +20,7 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
+            'positins2torque = whole_body_controller.pos2torque_leg_publisher:main',
             'wbc_node = whole_body_controller.wbc_node:main',
             'wbc_leg_node = whole_body_controller.wbc_leg_node:main',
             'temperature_node = whole_body_controller.temperature_node:main',

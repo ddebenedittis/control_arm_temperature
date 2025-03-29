@@ -49,11 +49,15 @@ ros2 launch robot_gazebo arm.launch.py
 
 Run the leg simulation with
 ```bash
-ros2 launch robot_gazebo leg.launch.py [rviz:={False,True}]
+ros2 launch robot_gazebo leg.launch.py [controller:={wbc,slider}] [rviz:={False,True}]
 ```
 Where:
+- `controller`: choose between `wbc` (default) and `slider` (pd controller with a slider command reference) controller.
 - `rviz`: run RViz2 to visualize the robot and the contact forces.
 
+## To Do
+
+- [ ] Add PD controller controllable with a slider.
 
 ## Author
 

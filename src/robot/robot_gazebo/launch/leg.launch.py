@@ -5,7 +5,7 @@ from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, ExecuteProcess, IncludeLaunchDescription
 from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
-from launch.substitutions import Command, LaunchConfiguration, PathJoinSubstitution
+from launch.substitutions import Command, LaunchConfiguration, PathJoinSubstitution, PythonExpression
 from launch_ros.actions import Node
 from launch_ros.parameter_descriptions import ParameterValue
 from launch_ros.substitutions import FindPackageShare
@@ -34,6 +34,12 @@ def generate_launch_description():
         Command(['xacro ', urdf_path]),
         value_type=str,
     )
+    
+    # ======================================================================= #
+    
+    controller = LaunchConfiguration('control', default='slider')
+    
+    use_rviz = LaunchConfiguration('rviz', default='False')
 
     # ======================================================================= #
 
@@ -98,6 +104,9 @@ def generate_launch_description():
     )
     
     spawn_controller = Node(
+        condition=IfCondition(PythonExpression([
+            '"', controller, '"', ' == "wbc"'
+        ])),
         package="whole_body_controller",
         executable="wbc_leg_node",
         parameters=[{'use_sim_time': True}],
@@ -114,20 +123,48 @@ def generate_launch_description():
     )
     
     change_camera = ExecuteProcess(
-            cmd=[
-                'gz', 'service', '-s', '/gui/move_to/pose',
-                '--reqtype', 'gz.msgs.GUICamera',
-                '--reptype', 'gz.msgs.Boolean',
-                '--timeout', '2000',
-                '--req',
-                'pose: {position: {x: 0.0, y: -1.0, z: 0.5}, orientation: {x: -0.0, y: 0.0, z: 0.707, w: 0.707}}'
-            ],
-            output='screen'
-        )
+        cmd=[
+            'gz', 'service', '-s', '/gui/move_to/pose',
+            '--reqtype', 'gz.msgs.GUICamera',
+            '--reptype', 'gz.msgs.Boolean',
+            '--timeout', '2000',
+            '--req',
+            'pose: {position: {x: 0.0, y: -1.0, z: 0.5}, orientation: {x: -0.0, y: 0.0, z: 0.707, w: 0.707}}'
+        ],
+        output='screen'
+    )
     
     # ======================================================================= #
     
-    use_rviz = LaunchConfiguration('rviz', default='False')
+    slider_pub_config = os.path.join(
+        get_package_share_path('robot_gazebo'),
+        'config',
+        'qj_slider_pub.yaml',
+    )
+    slider_publisher = Node(
+        condition=IfCondition(PythonExpression([
+            '"', controller, '"', ' == "slider"'
+        ])),
+        package="slider_publisher",
+        executable="slider_publisher",
+        parameters=[
+            {'use_sim_time': True},
+            {'config': slider_pub_config},
+        ],
+    )
+    
+    pos2torque = Node(
+        condition=IfCondition(PythonExpression([
+            '"', controller, '"', ' == "slider"'
+        ])),
+        package="whole_body_controller",
+        executable="positins2torque",
+        parameters=[{'use_sim_time': True}],
+        output='screen',
+        emulate_tty=True,
+    )
+    
+    # ======================================================================= #
     
     rviz_config_file = LaunchConfiguration('rviz_config_file', default='rviz_leg.rviz')
     rviz_config_file_path = PathJoinSubstitution([
@@ -159,4 +196,6 @@ def generate_launch_description():
         spawn_controller,
         spawn_temperature_node,
         rviz2,
+        slider_publisher,
+        pos2torque,
     ])

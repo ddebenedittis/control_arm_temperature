@@ -64,6 +64,7 @@ RUN --mount=type=cache,sharing=locked,target=/var/cache/apt --mount=type=cache,s
     ros-$ROS_DISTRO-ros2-control \
     ros-$ROS_DISTRO-ros2-controllers \
     ros-$ROS_DISTRO-rviz2 \
+    ros-$ROS_DISTRO-slider-publisher \
     ros-$ROS_DISTRO-xacro \
     sudo \
     wget
