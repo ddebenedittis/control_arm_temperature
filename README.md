@@ -57,7 +57,6 @@ Where:
 
 ## To Do
 
-- [ ] Add PD controller controllable with a slider.
 
 ## Author
 

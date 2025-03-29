@@ -18,6 +18,9 @@ class WBCController(Node):
     def __init__(self):
         super().__init__('wbc_node')
         
+        self.declare_parameter('debug', False)
+        debug = self.get_parameter('debug').get_parameter_value().bool_value
+        
         self.wbc = WholeBodyController('leg')
         
         # =========================== Subscribers =========================== #
@@ -45,8 +48,11 @@ class WBCController(Node):
         
         # ============================ Publishers =========================== #
         
+        joint_command_topic = '/effort_controller/commands'
+        if debug:
+            joint_command_topic = '/debug/effort_controller/commands'
         self.joint_command_pub = self.create_publisher(
-            Float64MultiArray, '/effort_controller/commands', 1)
+            Float64MultiArray, joint_command_topic, 1)
         
         self.contact_force_pub = self.create_publisher(
             WrenchesStamped, '/rviz/contact_forces', 1)

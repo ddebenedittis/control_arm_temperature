@@ -37,7 +37,7 @@ def generate_launch_description():
     
     # ======================================================================= #
     
-    controller = LaunchConfiguration('control', default='slider')
+    controller = LaunchConfiguration('controller', default='slider')
     
     use_rviz = LaunchConfiguration('rviz', default='False')
 
@@ -164,6 +164,20 @@ def generate_launch_description():
         emulate_tty=True,
     )
     
+    spawn_debug_controller = Node(
+        condition=IfCondition(PythonExpression([
+            '"', controller, '"', ' == "slider"'
+        ])),
+        package="whole_body_controller",
+        executable="wbc_leg_node",
+        parameters=[
+            {'debug': True},
+            {'use_sim_time': True},
+        ],
+        output='screen',
+        emulate_tty=True,
+    )
+    
     # ======================================================================= #
     
     rviz_config_file = LaunchConfiguration('rviz_config_file', default='rviz_leg.rviz')
@@ -198,4 +212,5 @@ def generate_launch_description():
         rviz2,
         slider_publisher,
         pos2torque,
+        spawn_debug_controller,
     ])
