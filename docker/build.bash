@@ -20,6 +20,8 @@ elif [[ $ROS_NUMBER == 2 ]]; then
 fi
 
 mkdir -p ~/.vscode ~/.vscode-server ~/.config/Code
+mkdir -p ~/docker/${IMAGE_NAME}/Plotjuggler
+cp docker/.config/PlotJuggler-3.ini ~/docker/${IMAGE_NAME}/Plotjuggler/PlotJuggler-3.ini
 
 # =============================== Help Function ============================== #
 

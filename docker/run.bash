@@ -28,6 +28,7 @@ docker run \
     --gpus all \
     `# Mount the folders in this directory.` \
     -v ${PWD}:${PWD} \
+    -v ~/docker/${IMAGE_NAME}/Plotjuggler:/home/davide/.config/PlotJuggler \
     `# Preserve bash history for autocomplete).` \
     --env="HISTFILE=/home/.bash_history" \
     --env="HISTFILESIZE=$HISTFILESIZE" \
