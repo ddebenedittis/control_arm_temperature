@@ -64,8 +64,8 @@ def main():
     textsize = 16
     labelsize = 18
 
-    # plt.rc('font', family='serif', serif='Times')
-    # plt.rc('text', usetex=True)
+    plt.rc('font', family='serif', serif='Times')
+    plt.rc('text', usetex=True)
     plt.rc('xtick', labelsize=textsize)
     plt.rc('ytick', labelsize=textsize)
     plt.rc('axes', titlesize=labelsize, labelsize=labelsize, prop_cycle=default_cycler)

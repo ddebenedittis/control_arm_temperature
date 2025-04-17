@@ -88,6 +88,16 @@ RUN --mount=type=cache,sharing=locked,target=/var/cache/apt --mount=type=cache,s
         python3-osrf-pycommon ; \
     fi
 
+ARG LATEX=0
+    RUN --mount=type=cache,sharing=locked,target=/var/cache/apt --mount=type=cache,sharing=locked,target=/var/lib/apt \
+        if [ "${LATEX}" = "1" ] ; then \
+            apt-get update && apt-get install --no-install-recommends -qqy \
+            dvipng \
+            texlive-latex-extra \
+            texlive-fonts-recommended \
+            cm-super ; \
+        fi
+
 ARG MYUID=1000
 ARG MYGID=1000
 ARG USER=ros

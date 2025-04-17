@@ -3,6 +3,8 @@ import numpy as np
 import rclpy
 from rclpy.node import Node
 
+from geometry_msgs.msg import PointStamped, PoseStamped
+from nav_msgs.msg import Path
 from sensor_msgs.msg import JointState
 from std_msgs.msg import Float64MultiArray
 
@@ -36,12 +38,24 @@ class WBCController(Node):
         self.joint_command_pub = self.create_publisher(
             Float64MultiArray, '/effort_controller/commands', 1)
         
+        self.ee_path_pub = self.create_publisher(
+            Path, '/ee_path', 1)
+        
+        self.ref_pub = self.create_publisher(
+            PointStamped, '/ee_reference', 1)
+        
         # ============================== Timer ============================== #
         
         self.timer_period = 0.0025
         self.timer = self.create_timer(self.timer_period, self.timer_callback)
         
         # ======================== Internal Variables ======================= #
+        
+        self.counter = 0
+        
+        self.path_msg = Path()
+        self.path_msg.header.frame_id = 'base_link'
+        self.path_msg.poses = []
         
         self.joint_positions = np.zeros(self.wbc.control_tasks.robot_wrapper.nq)
         self.joint_velocities = np.zeros(self.wbc.control_tasks.robot_wrapper.nv)
@@ -74,6 +88,36 @@ class WBCController(Node):
         msg = Float64MultiArray()
         msg.data = tau_opt.tolist()
         self.joint_command_pub.publish(msg)
+        
+        # Publish the end-effector path
+        decimation = 10
+        if self.counter % decimation == 0:
+            self.path_msg.header.stamp = self.get_clock().now().to_msg()
+            
+            pose_stamped = PoseStamped()
+            position_ee = self.wbc.get_ee_position()
+            
+            pose_stamped.pose.position.x = position_ee[0]
+            pose_stamped.pose.position.y = position_ee[1]
+            pose_stamped.pose.position.z = position_ee[2]
+            self.path_msg.poses.append(pose_stamped)
+            
+            self.path_msg.poses = self.path_msg.poses[-100:]
+            self.ee_path_pub.publish(self.path_msg)
+            
+            # Create a PointStamped message for the end-effector position
+            point_msg = PointStamped()
+            point_msg.header.frame_id = 'base_link'
+            point_msg.header.stamp = self.get_clock().now().to_msg()
+            point_msg.point.x = p_ref[0]
+            point_msg.point.y = p_ref[1]
+            point_msg.point.z = p_ref[2]
+            
+            self.ref_pub.publish(point_msg)
+            
+            self.counter = self.counter % decimation
+            
+        self.counter += 1
 
 
 def main(args=None):

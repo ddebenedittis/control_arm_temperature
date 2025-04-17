@@ -64,3 +64,6 @@ class WholeBodyController:
         self.control_tasks.tau = tau_opt
         
         return tau_opt
+
+    def get_ee_position(self):
+        return self.control_tasks.get_ee_position()

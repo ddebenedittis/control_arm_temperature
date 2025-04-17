@@ -2,9 +2,10 @@ import os
 
 from ament_index_python.packages import get_package_share_path
 from launch import LaunchDescription
-from launch.actions import ExecuteProcess, IncludeLaunchDescription
+from launch.actions import DeclareLaunchArgument, ExecuteProcess, IncludeLaunchDescription
+from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
-from launch.substitutions import Command
+from launch.substitutions import Command, LaunchConfiguration
 from launch_ros.actions import Node
 from launch_ros.parameter_descriptions import ParameterValue
 
@@ -32,6 +33,17 @@ def generate_launch_description():
         Command(['xacro ', urdf_path]),
         value_type=str,
     )
+    
+    rviz_config_file_path = os.path.join(
+        get_package_share_path('robot_gazebo'),
+        'config',
+        'rviz_arm.rviz',
+    )
+    
+    # ======================================================================= #
+    
+    log = LaunchConfiguration('log', default='False')
+    use_rviz = LaunchConfiguration('use_rviz', default='False')
 
     # ======================================================================= #
 
@@ -112,11 +124,21 @@ def generate_launch_description():
     )
     
     logger = Node(
+        condition=IfCondition(log),
         package="logger",
         executable="logger",
         parameters=[{'use_sim_time': True}],
         output='screen',
         emulate_tty=True,
+    )
+    
+    rviz2 = Node(
+        condition=IfCondition(use_rviz),
+        package='rviz2',
+        executable='rviz2',
+        name='rviz2',
+        parameters=[{'use_sim_time': True}],
+        arguments=['-d', rviz_config_file_path],
     )
     
     change_camera = ExecuteProcess(
@@ -132,6 +154,8 @@ def generate_launch_description():
     )
 
     return LaunchDescription([
+        DeclareLaunchArgument('log', default_value='False'),
+        DeclareLaunchArgument('use_rviz', default_value='False'),
         gz,
         gz_ros_bridge,
         change_camera,
@@ -142,4 +166,5 @@ def generate_launch_description():
         spawn_controller,
         spawn_temperature_node,
         logger,
+        rviz2,
     ])

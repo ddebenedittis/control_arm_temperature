@@ -248,3 +248,12 @@ class ControlTasks:
             im1*self.n_x + self.n_i + 2*self.n_q,
             im1*self.n_x + self.n_i + 3*self.n_q,
         )
+
+    # ======================================================================= #
+    
+    def get_ee_position(self):
+        """Get the end-effector position."""
+        
+        id_ee = self.robot_wrapper.model.getFrameId(self.robot_wrapper.ee_name)
+        self.robot_wrapper.forwardKinematics(self.q, self.v, 0 * self.v)
+        return self.robot_wrapper.framePlacement(self.q, id_ee).translation
