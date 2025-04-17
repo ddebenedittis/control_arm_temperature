@@ -111,17 +111,25 @@ def generate_launch_description():
         emulate_tty=True,
     )
     
+    logger = Node(
+        package="logger",
+        executable="logger",
+        parameters=[{'use_sim_time': True}],
+        output='screen',
+        emulate_tty=True,
+    )
+    
     change_camera = ExecuteProcess(
-            cmd=[
-                'gz', 'service', '-s', '/gui/move_to/pose',
-                '--reqtype', 'gz.msgs.GUICamera',
-                '--reptype', 'gz.msgs.Boolean',
-                '--timeout', '2000',
-                '--req',
-                'pose: {position: {x: 0.0, y: -1.0, z: 0.5}, orientation: {x: -0.0, y: 0.0, z: 0.707, w: 0.707}}'
-            ],
-            output='screen'
-        )
+        cmd=[
+            'gz', 'service', '-s', '/gui/move_to/pose',
+            '--reqtype', 'gz.msgs.GUICamera',
+            '--reptype', 'gz.msgs.Boolean',
+            '--timeout', '2000',
+            '--req',
+            'pose: {position: {x: 0.0, y: -2.0, z: 0.5}, orientation: {x: -0.0, y: 0.0, z: 0.707, w: 0.707}}'
+        ],
+        output='screen'
+    )
 
     return LaunchDescription([
         gz,
@@ -133,4 +141,5 @@ def generate_launch_description():
         spawn_effort_controller,
         spawn_controller,
         spawn_temperature_node,
+        logger,
     ])
