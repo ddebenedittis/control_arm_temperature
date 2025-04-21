@@ -11,7 +11,7 @@ from tf2_msgs.msg import TFMessage
 
 from tf2_ros import TransformBroadcaster
 
-from whole_body_controller.whole_body_controller_leg import WholeBodyController
+from whole_body_controller.leg.whole_body_controller_leg import WholeBodyController
 
 
 class WBCController(Node):
@@ -66,9 +66,9 @@ class WBCController(Node):
         
         # ======================== Internal Variables ======================= #
         
-        self.generalized_coordinates = np.zeros(self.wbc.control_tasks.n_q)
-        self.generalized_velocities = np.zeros(self.wbc.control_tasks.n_q)
-        self.temp = np.ones(self.wbc.control_tasks.n_qj) * 25
+        self.generalized_coordinates = np.zeros(self.wbc._control_tasks.n_q)
+        self.generalized_velocities = np.zeros(self.wbc._control_tasks.n_q)
+        self.temp = np.ones(self.wbc._control_tasks.n_qj) * 25
         
     def height_callback(self, msg: TFMessage):
         for transform in msg.transforms:
@@ -90,7 +90,7 @@ class WBCController(Node):
         # The joint positions and velocities need to be reordered as specified
         # in robot_model/robots/all_robots.yaml.
         for i, joint_name in enumerate(msg.name):
-            idx = self.wbc.control_tasks.robot_wrapper.joint_names.index(joint_name)
+            idx = self.wbc._control_tasks.robot_wrapper.joint_names.index(joint_name)
             joint_positions[idx] = msg.position[i]
             joint_velocities[idx] = msg.velocity[i]
             
@@ -137,7 +137,7 @@ class WBCController(Node):
         msg_2 = WrenchesStamped()
         msg_2.header.frame_id = 'link'
         msg_2.wrenches_stamped = [WrenchStamped()]
-        msg_2.wrenches_stamped[0].header.frame_id = self.wbc.control_tasks.robot_wrapper.ee_name
+        msg_2.wrenches_stamped[0].header.frame_id = self.wbc._control_tasks.robot_wrapper.ee_name
         msg_2.wrenches_stamped[0].wrench.force.x = f_opt[0]
         msg_2.wrenches_stamped[0].wrench.force.y = f_opt[1]
         msg_2.wrenches_stamped[0].wrench.force.z = f_opt[2]

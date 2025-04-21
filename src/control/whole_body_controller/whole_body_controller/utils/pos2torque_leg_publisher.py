@@ -6,7 +6,7 @@ from rclpy.node import Node
 from sensor_msgs.msg import JointState
 from std_msgs.msg import Float64MultiArray
 
-from whole_body_controller.whole_body_controller import WholeBodyController
+from whole_body_controller.arm.whole_body_controller import WholeBodyController
 
 
 class Position2Torque(Node):
@@ -57,7 +57,7 @@ class Position2Torque(Node):
         # The joint positions and velocities need to be reordered as specified
         # in robot_model/robots/all_robots.yaml.
         for i, joint_name in enumerate(msg.name):
-            idx = self.wbc.control_tasks.robot_wrapper.joint_names.index(joint_name)
+            idx = self.wbc._control_tasks.robot_wrapper.joint_names.index(joint_name)
             self.joint_positions[idx] = msg.position[i]
             self.joint_velocities[idx] = msg.velocity[i]
             

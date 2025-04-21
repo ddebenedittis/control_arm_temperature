@@ -1,8 +1,7 @@
 import numpy as np
 import pinocchio as pin
-from scipy.linalg import block_diag, pinv
+from scipy.linalg import pinv
 
-from hierarchical_qp.hierarchical_qp import HierarchicalQP
 from robot_model.robot_wrapper import RobotWrapper
 
 
@@ -13,7 +12,8 @@ class ControlTasks:
         
         # ============================== Sizes ============================== #
         
-        self.n_c = 2                        # n control steps
+        self._n_c = 2                        # n control steps
+        
         self.n_q = self.robot_wrapper.nq    # n joint positions
         self.n_s = 3*self.n_q               # n_states = q, qdot, T
         self.n_i = self.n_q                 # n inputs = tau
@@ -48,13 +48,23 @@ class ControlTasks:
         self.delta_tau_max =  5.0 * self.Ts
         self.delta_tau_min = -5.0 * self.Ts
         
-        self.T_max = 40
+        self.T_max = 100
         
         # ============================== Gains ============================== #
         
-        self.k_p = 10.0
-        self.k_d = 10.0
+        self.k_p = 10.
+        self.k_d = 10.
         
+    @property
+    def n_c(self):
+        return self._n_c
+    
+    @n_c.setter
+    def n_c(self, n_c):
+        if n_c < 1:
+            raise ValueError("n_c must be greater than 0")
+        self._n_c = n_c
+             
     def update(self, q: np.ndarray, v: np.ndarray, temp: np.ndarray):
         """Update the dynamic and kinematic quantities in Pinocchio."""
         

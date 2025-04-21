@@ -1,8 +1,7 @@
 import numpy as np
 import pinocchio as pin
-from scipy.linalg import block_diag, pinv
+from scipy.linalg import pinv
 
-from hierarchical_qp.hierarchical_qp import HierarchicalQP
 from robot_model.robot_wrapper import RobotWrapper
 
 
@@ -59,7 +58,7 @@ class ControlTasksLeg:
         # ============================== Gains ============================== #
         
         self.k_p = 10.0
-        self.k_d = 10.0
+        self.k_d = 1.0
         
     def update(self, q: np.ndarray, v: np.ndarray, temp: np.ndarray):
         """Update the dynamic and kinematic quantities in Pinocchio."""
@@ -176,11 +175,13 @@ class ControlTasksLeg:
         """Implement the force limits task. I.e. the Coulomb friction
         constraint and the positive normal force constraint."""
         
-        C = np.zeros((self.n_c * 5, self.n_x * self.n_c))
-        d = np.zeros(self.n_c * 5)
+        n_constr = 5
+        
+        C = np.zeros((self.n_c * n_constr, self.n_x * self.n_c))
+        d = np.zeros(self.n_c * n_constr)
         
         for i in range(self.n_c):
-            C[5*i:5*(i+1), self._id_fi(i)] =  np.array([
+            C[n_constr*i:n_constr*(i+1), self._id_fi(i)] =  np.array([
                 [ 0,  0,       -1],
                 [ 1,  0, -self.mu],
                 [-1,  0, -self.mu],
@@ -258,7 +259,7 @@ class ControlTasksLeg:
             + J_base @ pinv(M) @ h \
             + h_dd_ref \
             + self.k_d * h_d_ref \
-            + self.k_p * (h_ref - h_base)
+            + self.k_p * (h_ref - h_base + J_base @ self.q)
         
         for i in range(1, self.n_c):
             A[n*i:n*(i+1), self._id_taui(i)] = J_base @ pinv(M) @ S.T
@@ -270,7 +271,7 @@ class ControlTasksLeg:
                 + J_base @ pinv(M) @ h \
                 + h_dd_ref \
                 + self.k_d * h_d_ref \
-                + self.k_p * (h_ref - h_base)
+                + self.k_p * (h_ref - h_base + J_base @ self.q)
             
         return A, b
     

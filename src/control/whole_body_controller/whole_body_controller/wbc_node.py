@@ -8,7 +8,7 @@ from nav_msgs.msg import Path
 from sensor_msgs.msg import JointState
 from std_msgs.msg import Float64MultiArray
 
-from whole_body_controller.whole_body_controller import WholeBodyController
+from whole_body_controller.arm.whole_body_controller import WholeBodyController
 
 
 class WBCController(Node):
@@ -62,9 +62,9 @@ class WBCController(Node):
         self.path_msg.header.frame_id = 'base_link'
         self.path_msg.poses = []
         
-        self.joint_positions = np.zeros(self.wbc.control_tasks.robot_wrapper.nq)
-        self.joint_velocities = np.zeros(self.wbc.control_tasks.robot_wrapper.nv)
-        self.temp = np.ones(self.wbc.control_tasks.robot_wrapper.nq) * 25
+        self.joint_positions = np.zeros(self.wbc._control_tasks.robot_wrapper.nq)
+        self.joint_velocities = np.zeros(self.wbc._control_tasks.robot_wrapper.nv)
+        self.temp = np.ones(self.wbc._control_tasks.robot_wrapper.nq) * 25
         
     def joint_states_callback(self, msg: JointState):
         self.joint_positions = np.array(msg.position)
@@ -73,7 +73,7 @@ class WBCController(Node):
         # The joint positions and velocities need to be reordered as specified
         # in robot_model/robots/all_robots.yaml.
         for i, joint_name in enumerate(msg.name):
-            idx = self.wbc.control_tasks.robot_wrapper.joint_names.index(joint_name)
+            idx = self.wbc._control_tasks.robot_wrapper.joint_names.index(joint_name)
             self.joint_positions[idx] = msg.position[i]
             self.joint_velocities[idx] = msg.velocity[i]
             
@@ -112,13 +112,13 @@ class WBCController(Node):
     def timer_callback(self):
         p_ref, v_ref, a_ref = self.get_ref()
         
-        tau_opt = self.wbc(
+        sol = self.wbc(
             self.joint_positions, self.joint_velocities, self.temp,
             p_ref, v_ref, a_ref
         )
         
         msg = Float64MultiArray()
-        msg.data = tau_opt.tolist()
+        msg.data = sol.tau.tolist()
         self.joint_command_pub.publish(msg)
         
         # Publish the end-effector path

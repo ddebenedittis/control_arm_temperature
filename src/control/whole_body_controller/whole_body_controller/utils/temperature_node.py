@@ -5,7 +5,7 @@ from rclpy.node import Node
 
 from std_msgs.msg import Float64MultiArray
 
-from whole_body_controller.whole_body_controller import WholeBodyController
+from whole_body_controller.arm.whole_body_controller import WholeBodyController
 
 
 class ActuatorsTemperature(Node):
@@ -15,8 +15,8 @@ class ActuatorsTemperature(Node):
         super().__init__('temperature_node')
         
         wbc = WholeBodyController('arm')
-        self.nq = wbc.control_tasks.robot_wrapper.nq
-        self.joint_names = wbc.control_tasks.robot_wrapper.joint_names
+        self.nq = wbc._control_tasks.robot_wrapper.nq
+        self.joint_names = wbc._control_tasks.robot_wrapper.joint_names
         
         # =========================== Subscribers =========================== #
         
