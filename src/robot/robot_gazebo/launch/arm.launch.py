@@ -43,6 +43,7 @@ def generate_launch_description():
     # ======================================================================= #
     
     log = LaunchConfiguration('log', default='False')
+    task = LaunchConfiguration('task', default='point')
     use_rviz = LaunchConfiguration('use_rviz', default='False')
 
     # ======================================================================= #
@@ -110,7 +111,10 @@ def generate_launch_description():
     spawn_controller = Node(
         package="whole_body_controller",
         executable="wbc_node",
-        parameters=[{'use_sim_time': True}],
+        parameters=[
+            {'use_sim_time': True},
+            {'task': task},
+        ],
         output='screen',
         emulate_tty=True,
     )
@@ -155,6 +159,7 @@ def generate_launch_description():
 
     return LaunchDescription([
         DeclareLaunchArgument('log', default_value='False'),
+        DeclareLaunchArgument('task', default_value='point'),
         DeclareLaunchArgument('use_rviz', default_value='False'),
         gz,
         gz_ros_bridge,

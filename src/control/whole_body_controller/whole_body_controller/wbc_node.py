@@ -15,6 +15,9 @@ class WBCController(Node):
     def __init__(self):
         super().__init__('wbc_node')
         
+        self.declare_parameter('task', 'point')
+        self.task = self.get_parameter('task').get_parameter_value().string_value
+        
         self.wbc = WholeBodyController('arm')
         
         # =========================== Subscribers =========================== #
@@ -49,6 +52,8 @@ class WBCController(Node):
         self.timer_period = 0.0025
         self.timer = self.create_timer(self.timer_period, self.timer_callback)
         
+        self.time = 0.0
+        
         # ======================== Internal Variables ======================= #
         
         self.counter = 0
@@ -74,11 +79,38 @@ class WBCController(Node):
             
     def temperature_callback(self, msg: Float64MultiArray):
         self.temp = np.array(msg.data)
+        
+    def get_ref(self):
+        if self.task == 'point':
+            p_ref = np.array([0.30, -0.16, -0.4])
+            v_ref = np.zeros(3)
+            a_ref = np.zeros(3)
+        elif self.task == 'circle':
+            radius = 0.1
+            omega = 1
+            
+            p_ref = np.array([
+                0.30 + radius * np.cos(omega * self.time),
+                - 0.16,
+                -0.4 + radius * np.sin(omega * self.time)
+            ])
+            v_ref = np.array([
+                - radius * omega * np.sin(omega * self.time),
+                0,
+                radius * omega * np.cos(omega * self.time)
+            ])
+            a_ref = np.array([
+                - radius * omega**2 * np.cos(omega * self.time),
+                0,
+                - radius * omega**2 * np.sin(omega * self.time)
+            ])
+        else:
+            raise ValueError(f"Unknown task: {self.task}")
+            
+        return p_ref, v_ref, a_ref
             
     def timer_callback(self):
-        p_ref = np.array([0.30, -0.16, -0.4])
-        v_ref = np.zeros(3)
-        a_ref = np.zeros(3)
+        p_ref, v_ref, a_ref = self.get_ref()
         
         tau_opt = self.wbc(
             self.joint_positions, self.joint_velocities, self.temp,
@@ -90,7 +122,7 @@ class WBCController(Node):
         self.joint_command_pub.publish(msg)
         
         # Publish the end-effector path
-        decimation = 10
+        decimation = 50
         if self.counter % decimation == 0:
             self.path_msg.header.stamp = self.get_clock().now().to_msg()
             
@@ -105,6 +137,10 @@ class WBCController(Node):
             self.path_msg.poses = self.path_msg.poses[-100:]
             self.ee_path_pub.publish(self.path_msg)
             
+            self.counter = self.counter % decimation
+            
+        decimation = 10
+        if self.counter % decimation == 0:
             # Create a PointStamped message for the end-effector position
             point_msg = PointStamped()
             point_msg.header.frame_id = 'base_link'
@@ -115,9 +151,8 @@ class WBCController(Node):
             
             self.ref_pub.publish(point_msg)
             
-            self.counter = self.counter % decimation
-            
         self.counter += 1
+        self.time += self.timer_period
 
 
 def main(args=None):
