@@ -40,8 +40,11 @@ Optional arguments are enclosed within square brackets, i.e. `[]`; for multiple 
 
 Run the arm simulation with
 ```bash
-ros2 launch robot_gazebo arm.launch.py
+ros2 launch robot_gazebo arm.launch.py [task:={point, circle}] [use_rviz:={False, True}]
 ```
+Where the parameters have the following meanings
+- `task`: the reference is a stationary point (`point`) or a circle `cirlce`.
+- `use_rviz`: display the robot in rviz with some additional informations.
 
 <img src="https://raw.githubusercontent.com/ddebenedittis/media/main/control_arm_temperature/arm.webp" width="500">
 
