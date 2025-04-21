@@ -11,6 +11,7 @@
             "MYGID": "1000",
             "USER": "${localEnv:USER}",
             "PWDR": "${localEnv:PWD}",
+            "DOCS": "true",
             "LATEX": "true"
         }
     },

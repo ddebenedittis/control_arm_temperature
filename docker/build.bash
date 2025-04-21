@@ -29,6 +29,8 @@ helpFunction()
 {
     echo ""
     echo "Usage: $0 [-l] [-r]"
+    echo -e "\t-a   --all           Install all dependencies."
+    echo -e "\t-d   --docs          Install sphynx."
     echo -e "\t-h   --help          Print the help."
     echo -e "\t-l   --larex         Install latex. Bigger, but can use LaTeX in plots."
     echo -e "\t-r   --rebuild       Rebuild the image."
@@ -38,6 +40,7 @@ helpFunction()
 # =============================== Build Options ============================== #
 
 # Initialie the build options
+DOCS=0
 LATEX=0
 REBUILD=0
 
@@ -47,7 +50,7 @@ needs_arg() { if [ -z "$OPTARG" ]; then die "No arg for --$OPT option"; fi; }
 no_arg() { if [ -n "$OPTARG" ]; then die "No arg allowed for --$OPT option"; fi; }
 
 # Get the script options. This accepts both single dash (e.g. -a) and double dash options (e.g. --all)
-while getopts hlr-: OPT; do
+while getopts adhlr-: OPT; do
     # support long options: https://stackoverflow.com/a/28466267/519360
     if [ "$OPT" = "-" ]; then     # long option: reformulate OPT and OPTARG
         OPT="${OPTARG%%=*}"       # extract long option name
@@ -55,6 +58,8 @@ while getopts hlr-: OPT; do
         OPTARG="${OPTARG#=}"      # if long option argument, remove assigning `=`
     fi
     case "$OPT" in
+        a | all )       no_arg; DOCS=1; LATEX=1 ;;
+        d | docs )      no_arg; DOCS=1 ;;
         h | help )      no_arg; helpFunction ;;
         l | latex )     no_arg; LATEX=1 ;;
         r | rebuild )   no_arg; REBUILD=1 ;;
@@ -85,6 +90,7 @@ docker build \
     --build-arg MYGID=${GID} \
     --build-arg USER=${USER} \
     --build-arg "PWDR=$PWD" \
+    --build-arg DOCS=$DOCS \
     --build-arg LATEX=$LATEX \
     -t $IMAGE_NAME \
     -f docker/Dockerfile .

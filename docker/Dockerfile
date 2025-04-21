@@ -98,6 +98,16 @@ ARG LATEX=0
             cm-super ; \
         fi
 
+ARG DOCS=0
+    RUN --mount=type=cache,mode=0755,target=/root/.cache/pip \
+        if [ "${DOCS}" = "1" ] ; then \
+            pip3 install \
+                sphynx \
+                sphinx-autobuild \
+                sphinx-book-theme \
+                --break-system-packages ; \
+        fi
+
 ARG MYUID=1000
 ARG MYGID=1000
 ARG USER=ros
