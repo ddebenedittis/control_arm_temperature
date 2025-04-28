@@ -5,6 +5,7 @@ import os
 import rclpy
 from rclpy.node import Node
 
+from geometry_msgs.msg import PointStamped
 from sensor_msgs.msg import JointState
 from std_msgs.msg import Float64MultiArray
 
@@ -28,9 +29,16 @@ class Logger(Node):
             1,
         )
         
+        self.reference_position_subscription = self.create_subscription(
+            PointStamped,
+            '/ee_reference',
+            self.reference_position_callback,
+            1,
+        )
+        
         # ============================== Timer ============================== #
         
-        self.timer_period = 0.01
+        self.timer_period = 0.1
         self.timer = self.create_timer(self.timer_period, self.timer_callback)
         
         # ======================== Internal Variables ======================= #
@@ -42,14 +50,18 @@ class Logger(Node):
         self.joint_torques = None
         self.temperatures = None
         
+        self.reference_position = None
+        
         self.k = 0
-        timesteps = 1000
+        timesteps = 1200
         
         self.times_vec = np.zeros(timesteps)
         self.joint_positions_vec = np.zeros((timesteps, 3))
         self.joint_velocities_vec = np.zeros((timesteps, 3))
         self.joint_torques_vec = np.zeros((timesteps, 3))
         self.temperatures_vec = np.zeros((timesteps, 3))
+        
+        self.reference_position_vec = np.zeros((timesteps, 3))
         
     def joint_states_callback(self, msg: JointState):
         self.joint_positions = np.array(msg.position)
@@ -66,6 +78,9 @@ class Logger(Node):
     def temperature_callback(self, msg: Float64MultiArray):
         self.temperatures = np.array(msg.data)
         
+    def reference_position_callback(self, msg: PointStamped):
+        self.reference_position = np.array([msg.point.x, msg.point.y, msg.point.z])
+        
     def timer_callback(self):
         if self.joint_positions is None:
             return
@@ -75,6 +90,9 @@ class Logger(Node):
         self.joint_velocities_vec[self.k, :] = self.joint_velocities
         self.joint_torques_vec[self.k, :] = self.joint_torques
         self.temperatures_vec[self.k, :] = self.temperatures
+        
+        self.reference_position_vec[self.k, :] = self.reference_position
+        
         self.k += 1
             
         if self.k < self.joint_positions_vec.shape[0]:
@@ -96,6 +114,7 @@ class Logger(Node):
             joint_velocities=self.joint_velocities_vec,
             joint_torques=self.joint_torques_vec,
             temperatures=self.temperatures_vec,
+            reference_position=self.reference_position_vec,
         )
         
         print("DONE")

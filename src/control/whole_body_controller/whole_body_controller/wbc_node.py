@@ -19,6 +19,7 @@ class WBCController(Node):
         self.task = self.get_parameter('task').get_parameter_value().string_value
         
         self.wbc = WholeBodyController('arm')
+        self.wbc.n_c = 1
         
         # =========================== Subscribers =========================== #
         
@@ -47,6 +48,9 @@ class WBCController(Node):
         self.ref_pub = self.create_publisher(
             PointStamped, '/ee_reference', 1)
         
+        self.ee_reference_path_pub = self.create_publisher(
+            Path, '/ee_reference_path', 1)
+        
         # ============================== Timer ============================== #
         
         self.timer_period = 0.0025
@@ -61,6 +65,10 @@ class WBCController(Node):
         self.path_msg = Path()
         self.path_msg.header.frame_id = 'base_link'
         self.path_msg.poses = []
+        
+        self.reference_path_msg = Path()
+        self.reference_path_msg.header.frame_id = 'base_link'
+        self.reference_path_msg.poses = []
         
         self.joint_positions = np.zeros(self.wbc._control_tasks.robot_wrapper.nq)
         self.joint_velocities = np.zeros(self.wbc._control_tasks.robot_wrapper.nv)
@@ -121,21 +129,34 @@ class WBCController(Node):
         msg.data = sol.tau.tolist()
         self.joint_command_pub.publish(msg)
         
-        # Publish the end-effector path
         decimation = 50
         if self.counter % decimation == 0:
+            # Publish the end-effector path
             self.path_msg.header.stamp = self.get_clock().now().to_msg()
             
-            pose_stamped = PoseStamped()
+            reference_pose_stamped = PoseStamped()
             position_ee = self.wbc.get_ee_position()
             
-            pose_stamped.pose.position.x = position_ee[0]
-            pose_stamped.pose.position.y = position_ee[1]
-            pose_stamped.pose.position.z = position_ee[2]
-            self.path_msg.poses.append(pose_stamped)
+            reference_pose_stamped.pose.position.x = position_ee[0]
+            reference_pose_stamped.pose.position.y = position_ee[1]
+            reference_pose_stamped.pose.position.z = position_ee[2]
+            self.path_msg.poses.append(reference_pose_stamped)
             
-            self.path_msg.poses = self.path_msg.poses[-100:]
+            self.path_msg.poses = self.path_msg.poses[-500:]
             self.ee_path_pub.publish(self.path_msg)
+            
+            # Publish the end-effector reference path
+            self.reference_path_msg.header.stamp = self.get_clock().now().to_msg()
+            
+            reference_pose_stamped = PoseStamped()
+            
+            reference_pose_stamped.pose.position.x = p_ref[0]
+            reference_pose_stamped.pose.position.y = p_ref[1]
+            reference_pose_stamped.pose.position.z = p_ref[2]
+            self.reference_path_msg.poses.append(reference_pose_stamped)
+            
+            self.reference_path_msg.poses = self.reference_path_msg.poses[-500:]
+            self.ee_reference_path_pub.publish(self.reference_path_msg)
             
             self.counter = self.counter % decimation
             
