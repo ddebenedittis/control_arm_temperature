@@ -2,6 +2,7 @@ import numpy as np
 
 import rclpy
 from rclpy.node import Node
+from rclpy.exceptions import InvalidParameterTypeException
 
 from geometry_msgs.msg import PointStamped, PoseStamped
 from nav_msgs.msg import Path
@@ -28,17 +29,57 @@ class WBCController(Node):
         self.declare_parameter('nc', 1)
         self.wbc.n_c = self.get_parameter('nc').get_parameter_value().integer_value
         
-        self.declare_parameter('dt', 0.25)
-        self.wbc._control_tasks.dt = self.get_parameter('dt').get_parameter_value().double_value
+        try:
+            self.declare_parameter('dt', 0.25)
+            self.wbc._control_tasks.dt = self.get_parameter('dt').get_parameter_value().double_value
+        except InvalidParameterTypeException as _:
+            try:
+                self.declare_parameter('dt', 1)
+                self.wbc._control_tasks.dt = float(
+                    self.get_parameter('dt').get_parameter_value().integer_value)
+            except Exception as e:
+                self.get_logger().error(f"Invalid parameter type for 'dt': {e}.")
+                raise e
+
         
-        self.declare_parameter('kp', 10.0)
-        self.wbc._control_tasks.k_p = self.get_parameter('kp').get_parameter_value().double_value
+        try:
+            self.declare_parameter('kp', 10.0)
+            self.wbc._control_tasks.k_p = self.get_parameter('kp').get_parameter_value().double_value
+        except InvalidParameterTypeException as _:
+            try:
+                self.declare_parameter('kp', 10)
+                self.wbc._control_tasks.k_p = float(
+                    self.get_parameter('kp').get_parameter_value().integer_value)
+            except Exception as e:
+                self.get_logger().error(f"Invalid parameter type for 'kp': {e}.")
+                raise e
+
         
-        self.declare_parameter('kd', 10.0)
-        self.wbc._control_tasks.k_d = self.get_parameter('kd').get_parameter_value().double_value
+        try:
+            self.declare_parameter('kd', 10.0)
+            self.wbc._control_tasks.k_d = self.get_parameter('kd').get_parameter_value().double_value
+        except InvalidParameterTypeException as _:
+            try:
+                self.declare_parameter('kd', 10)
+                self.wbc._control_tasks.k_d = float(
+                    self.get_parameter('kd').get_parameter_value().integer_value)
+            except Exception as e:
+                self.get_logger().error(f"Invalid parameter type for 'kd': {e}.")
+                raise e
+
         
-        self.declare_parameter('ki', 1.0)
-        self.wbc._control_tasks.k_i = self.get_parameter('ki').get_parameter_value().double_value
+        try:
+            self.declare_parameter('ki', 1.0)
+            self.wbc._control_tasks.k_i = self.get_parameter('ki').get_parameter_value().double_value
+        except InvalidParameterTypeException as _:
+            try:
+                self.declare_parameter('ki', 1)
+                self.wbc._control_tasks.k_i = float(
+                    self.get_parameter('ki').get_parameter_value().integer_value)
+            except Exception as e:
+                self.get_logger().error(f"Invalid parameter type for 'ki': {e}.")
+                raise e
+
         
         # =========================== Subscribers =========================== #
         
