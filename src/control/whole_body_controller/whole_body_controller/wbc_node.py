@@ -15,11 +15,30 @@ class WBCController(Node):
     def __init__(self):
         super().__init__('wbc_node')
         
+        self.wbc = WholeBodyController('arm')
+        
+        self.k_p = 0.001
+        self.k_d = 0.0001
+        
+        # ============================ Parameters =========================== #
+        
         self.declare_parameter('task', 'point')
         self.task = self.get_parameter('task').get_parameter_value().string_value
         
-        self.wbc = WholeBodyController('arm')
-        self.wbc.n_c = 1
+        self.declare_parameter('nc', 1)
+        self.wbc.n_c = self.get_parameter('nc').get_parameter_value().integer_value
+        
+        self.declare_parameter('dt', 0.25)
+        self.wbc._control_tasks.dt = self.get_parameter('dt').get_parameter_value().double_value
+        
+        self.declare_parameter('kp', 10.0)
+        self.wbc._control_tasks.k_p = self.get_parameter('kp').get_parameter_value().double_value
+        
+        self.declare_parameter('kd', 10.0)
+        self.wbc._control_tasks.k_d = self.get_parameter('kd').get_parameter_value().double_value
+        
+        self.declare_parameter('ki', 1.0)
+        self.wbc._control_tasks.k_i = self.get_parameter('ki').get_parameter_value().double_value
         
         # =========================== Subscribers =========================== #
         
@@ -41,6 +60,9 @@ class WBCController(Node):
         
         self.joint_command_pub = self.create_publisher(
             Float64MultiArray, '/effort_controller/commands', 1)
+        
+        self.ee_pos_pub = self.create_publisher(
+            PointStamped, '/ee_position', 1)
         
         self.ee_path_pub = self.create_publisher(
             Path, '/ee_path', 1)
@@ -125,8 +147,13 @@ class WBCController(Node):
             p_ref, v_ref, a_ref
         )
         
+        tau_ff = sol.tau
+        tau = tau_ff \
+            + self.k_p * (sol.q - self.joint_positions) \
+            + self.k_d * (sol.v - self.joint_velocities)
+        
         msg = Float64MultiArray()
-        msg.data = sol.tau.tolist()
+        msg.data = tau.tolist()
         self.joint_command_pub.publish(msg)
         
         decimation = 50
@@ -162,7 +189,17 @@ class WBCController(Node):
             
         decimation = 10
         if self.counter % decimation == 0:
-            # Create a PointStamped message for the end-effector position
+            # Publish the end-effector position
+            ee_position = PointStamped()
+            ee_position.header.frame_id = 'base_link'
+            ee_position.header.stamp = self.get_clock().now().to_msg()
+            ee_position.point.x = self.wbc.get_ee_position()[0]
+            ee_position.point.y = self.wbc.get_ee_position()[1]
+            ee_position.point.z = self.wbc.get_ee_position()[2]
+            
+            self.ee_pos_pub.publish(ee_position)
+            
+            # Create a PointStamped message for the reference end-effector position
             point_msg = PointStamped()
             point_msg.header.frame_id = 'base_link'
             point_msg.header.stamp = self.get_clock().now().to_msg()

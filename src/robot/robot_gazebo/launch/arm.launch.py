@@ -3,7 +3,7 @@ import os
 from ament_index_python.packages import get_package_share_path
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, ExecuteProcess, IncludeLaunchDescription
-from launch.conditions import IfCondition
+from launch.conditions import IfCondition, UnlessCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import Command, LaunchConfiguration
 from launch_ros.actions import Node
@@ -40,11 +40,24 @@ def generate_launch_description():
         'rviz_arm.rviz',
     )
     
+    wbc_config_file_path = os.path.join(
+        get_package_share_path('whole_body_controller'),
+        'config',
+        'arm_wbc.yaml',
+    )
+    
     # ======================================================================= #
     
     log = LaunchConfiguration('log', default='False')
     task = LaunchConfiguration('task', default='point')
     use_rviz = LaunchConfiguration('use_rviz', default='False')
+    
+    use_yaml_params = LaunchConfiguration('use_yaml_params', default='False')
+    nc = LaunchConfiguration('nc', default='1')
+    dt = LaunchConfiguration('dt', default='0.25')
+    kp = LaunchConfiguration('kp', default='10.0')
+    kd = LaunchConfiguration('kd', default='10.0')
+    ki = LaunchConfiguration('ki', default='1.0')
 
     # ======================================================================= #
 
@@ -109,15 +122,34 @@ def generate_launch_description():
     )
     
     spawn_controller = Node(
+        condition=UnlessCondition(use_yaml_params),
         package="whole_body_controller",
         executable="wbc_node",
         parameters=[
             {'use_sim_time': True},
             {'task': task},
+            {'nc': nc},
+            {'dt': dt},
+            {'kp': kp},
+            {'kd': kd},
+            {'ki': ki},
         ],
         output='screen',
         emulate_tty=True,
     )
+    
+    spawn_controller_yaml = Node(
+        condition=IfCondition(use_yaml_params),
+        package="whole_body_controller",
+        executable="wbc_node",
+        # pass params by config file,
+        parameters=[
+            {'use_sim_time': True},
+            wbc_config_file_path,
+        ],
+        output='screen',
+        emulate_tty=True,
+    )       
     
     spawn_temperature_node = Node(
         package="whole_body_controller",
@@ -161,6 +193,12 @@ def generate_launch_description():
         DeclareLaunchArgument('log', default_value='False'),
         DeclareLaunchArgument('task', default_value='point'),
         DeclareLaunchArgument('use_rviz', default_value='False'),
+        DeclareLaunchArgument('use_yaml_params', default_value='False'),
+        DeclareLaunchArgument('nc', default_value='1'),
+        DeclareLaunchArgument('dt', default_value='0.25'),
+        DeclareLaunchArgument('kp', default_value='10.0'),
+        DeclareLaunchArgument('kd', default_value='10.0'),
+        DeclareLaunchArgument('ki', default_value='1.0'),
         gz,
         gz_ros_bridge,
         change_camera,
@@ -168,6 +206,7 @@ def generate_launch_description():
         spawn_arm,
         spawn_joint_state_broadcaster,
         spawn_effort_controller,
+        spawn_controller_yaml,
         spawn_controller,
         spawn_temperature_node,
         logger,

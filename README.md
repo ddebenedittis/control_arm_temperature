@@ -40,11 +40,18 @@ Optional arguments are enclosed within square brackets, i.e. `[]`; for multiple 
 
 Run the arm simulation with
 ```bash
-ros2 launch robot_gazebo arm.launch.py [task:={point, circle}] [use_rviz:={False, True}]
+ros2 launch robot_gazebo arm.launch.py [log:={False, True}] [use_rviz:={False, True}] [use_yaml:={False, True}] [task:={point, circle}]
 ```
 Where the parameters have the following meanings
-- `task`: the reference is a stationary point (`point`) or a circle `cirlce`.
+- `log`: log the simulation data in a csv file.
 - `use_rviz`: display the robot in rviz with some additional informations.
+- `use_yaml`: if `true`, use a yaml file (`src/control/whole_body_controller/config/arm_wbc.yaml`) instead of command line arguments to set the parameters of the simulation. If `False`, the following parameters are used:
+  - `task`: the reference is a stationary point (`point`) or a circle `cirlce`.
+  - `nc`: MPC prediction horizon.
+  - `dt`: time step of the simulation.
+  - `kp`: proportional gain of the MPC controller.
+  - `kd`: derivative gain of the MPC controller.
+  - `ki`: integral gain of the MPC controller.
 
 <img src="https://raw.githubusercontent.com/ddebenedittis/media/main/control_arm_temperature/arm.webp" width="500">
 

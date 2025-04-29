@@ -1,0 +1,11 @@
+whole_body_controller:
+    ros__parameters:
+        task: point
+
+        n_c: 1
+
+        dt: 0.25
+
+        k_p: 10.0
+        k_d: 10.0
+        k_i: 0.0
