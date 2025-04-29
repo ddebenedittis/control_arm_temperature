@@ -52,7 +52,7 @@ def generate_launch_description():
     task = LaunchConfiguration('task', default='point')
     use_rviz = LaunchConfiguration('use_rviz', default='False')
     
-    use_yaml_params = LaunchConfiguration('use_yaml_params', default='False')
+    use_yaml = LaunchConfiguration('use_yaml', default='False')
     nc = LaunchConfiguration('nc', default='1')
     dt = LaunchConfiguration('dt', default='0.25')
     kp = LaunchConfiguration('kp', default='10.0')
@@ -122,7 +122,7 @@ def generate_launch_description():
     )
     
     spawn_controller = Node(
-        condition=UnlessCondition(use_yaml_params),
+        condition=UnlessCondition(use_yaml),
         package="whole_body_controller",
         executable="wbc_node",
         parameters=[
@@ -139,7 +139,7 @@ def generate_launch_description():
     )
     
     spawn_controller_yaml = Node(
-        condition=IfCondition(use_yaml_params),
+        condition=IfCondition(use_yaml),
         package="whole_body_controller",
         executable="wbc_node",
         # pass params by config file,
@@ -193,7 +193,7 @@ def generate_launch_description():
         DeclareLaunchArgument('log', default_value='False'),
         DeclareLaunchArgument('task', default_value='point'),
         DeclareLaunchArgument('use_rviz', default_value='False'),
-        DeclareLaunchArgument('use_yaml_params', default_value='False'),
+        DeclareLaunchArgument('use_yaml', default_value='False'),
         DeclareLaunchArgument('nc', default_value='1'),
         DeclareLaunchArgument('dt', default_value='0.25'),
         DeclareLaunchArgument('kp', default_value='10.0'),

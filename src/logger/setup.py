@@ -20,6 +20,7 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
+            'kpi = logger.kpi:main',
             'logger = logger.logger:main',
             'plotter = logger.plotter:main',
         ],

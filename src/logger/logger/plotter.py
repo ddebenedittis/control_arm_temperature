@@ -78,6 +78,8 @@ def main():
     
     plots_format = 'pdf'
     
+    # ======================================================================= #
+    
     # Get the number of folders to process and create the output directories
     rootdir_csv = "log/csv"
     rootdir_plt = "log/" + plots_format

@@ -2,6 +2,7 @@ import datetime
 import numpy as np
 import os
 
+from ament_index_python.packages import get_package_share_directory
 import rclpy
 from rclpy.node import Node
 
@@ -12,6 +13,10 @@ from std_msgs.msg import Float64MultiArray
 class Logger(Node):
     def __init__(self):
         super().__init__('logger')
+        
+        # ============================ Parameters =========================== #
+        
+        self.declare_parameter('time', 'yyyy-mm-dd-hh-mm-ss')
         
         # =========================== Subscribers =========================== #
         
@@ -26,6 +31,13 @@ class Logger(Node):
             Float64MultiArray,
             '/joint_states/temperature',
             self.temperature_callback,
+            1,
+        )
+        
+        self.ee_position_subscription = self.create_subscription(
+            PointStamped,
+            '/ee_position',
+            self.ee_position_callback,
             1,
         )
         
@@ -50,10 +62,11 @@ class Logger(Node):
         self.joint_torques = None
         self.temperatures = None
         
+        self.ee_position = None
         self.reference_position = None
         
         self.k = 0
-        timesteps = 1200
+        timesteps = 600
         
         self.times_vec = np.zeros(timesteps)
         self.joint_positions_vec = np.zeros((timesteps, 3))
@@ -61,6 +74,7 @@ class Logger(Node):
         self.joint_torques_vec = np.zeros((timesteps, 3))
         self.temperatures_vec = np.zeros((timesteps, 3))
         
+        self.ee_position_vec = np.zeros((timesteps, 3))
         self.reference_position_vec = np.zeros((timesteps, 3))
         
     def joint_states_callback(self, msg: JointState):
@@ -78,6 +92,9 @@ class Logger(Node):
     def temperature_callback(self, msg: Float64MultiArray):
         self.temperatures = np.array(msg.data)
         
+    def ee_position_callback(self, msg: PointStamped):
+        self.ee_position = np.array([msg.point.x, msg.point.y, msg.point.z])
+        
     def reference_position_callback(self, msg: PointStamped):
         self.reference_position = np.array([msg.point.x, msg.point.y, msg.point.z])
         
@@ -91,6 +108,7 @@ class Logger(Node):
         self.joint_torques_vec[self.k, :] = self.joint_torques
         self.temperatures_vec[self.k, :] = self.temperatures
         
+        self.ee_position_vec[self.k, :] = self.ee_position
         self.reference_position_vec[self.k, :] = self.reference_position
         
         self.k += 1
@@ -98,14 +116,17 @@ class Logger(Node):
         if self.k < self.joint_positions_vec.shape[0]:
             return
         
-        path = "log/csv/" + f"{datetime.datetime.now():%Y-%m-%d-%H:%M:%S}"
+        time = str(self.get_parameter('time').get_parameter_value().string_value)
+        workspace_directory = f"{get_package_share_directory('logger')}/../../../../"
+        
+        path = f"{workspace_directory}/log/csv/{time}"
             
         try:
             os.makedirs(path)
         except OSError:
-            print("Creation of the directories %s failed" % path)
+            print("Creation of the directory %s failed" % path)
         else:
-            print("Successfully created the directories %s" % path)
+            print("Successfully created the directory %s" % path)
             
         np.savez(
             path + '/log.npz',
@@ -114,6 +135,7 @@ class Logger(Node):
             joint_velocities=self.joint_velocities_vec,
             joint_torques=self.joint_torques_vec,
             temperatures=self.temperatures_vec,
+            ee_position=self.ee_position_vec,
             reference_position=self.reference_position_vec,
         )
         
