@@ -79,6 +79,12 @@ class WholeBodyController:
         C.append(C_temp)
         d.append(d_temp)
         
+        C_vel_lim, d_vel_lim = self._control_tasks.task_velocity_limits()
+        A.append(None)
+        b.append(None)
+        C.append(C_vel_lim)
+        d.append(d_vel_lim)
+        
         A_ref, b_ref = self._control_tasks.task_motion_ref(
             pos_ref, vel_ref, acc_ref
         )

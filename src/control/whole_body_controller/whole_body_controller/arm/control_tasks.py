@@ -48,12 +48,13 @@ class ControlTasks:
         self.delta_tau_max =  5.0 * self.Ts
         self.delta_tau_min = -5.0 * self.Ts
         
-        self.T_max = 100
+        self.T_max = 40
         
         # ============================== Gains ============================== #
         
-        self.k_p = 10.
-        self.k_d = 10.
+        self.k_p = 10.0
+        self.k_d = 10.0
+        self.k_i = 0.0
         
     @property
     def n_c(self):
@@ -139,6 +140,18 @@ class ControlTasks:
             d[off+(2*i+1)*self.n_i:off+(2*i+2)*self.n_i] = - self.delta_tau_min - self.tau
             
         return C, d
+    
+    def task_velocity_limits(self):
+        C = np.zeros((2 * self.n_c * self.n_q, self.n_x * self.n_c))
+        d = np.zeros(2 * self.n_c * self.n_q)
+        
+        for i in range(self.n_c):
+            C[i*self.n_q:(i+1)*self.n_q, self._id_vi(i+1)] = np.eye(self.n_q)
+            d[i*self.n_q:(i+1)*self.n_q] = 2.0
+            C[(i+1)*self.n_q:(i+2)*self.n_q, self._id_vi(i+1)] = - np.eye(self.n_q)
+            d[(i+1)*self.n_q:(i+2)*self.n_q] = 2.0
+            
+        return C, d
             
     def task_temperature_limits(self):
         C = np.zeros((self.n_c * self.n_q, self.n_x * self.n_c))
@@ -175,13 +188,17 @@ class ControlTasks:
         
         A[0:3, self._id_ui(0)] = J_ee @ pinv(M)
         
+        a_des = a_ref + self.k_d * (v_ref - J_ee @ self.v) + self.k_p * (p_ref - pos_ee)
+        v_des = self.q + a_des * self.dt
+        
         b[0:3] = - J_ee_dot_times_v \
             + J_ee @ pinv(M) @ h \
             + a_ref \
             + self.k_d * (v_ref - J_ee @ self.v) \
-            + self.k_p * (p_ref - pos_ee)
+            + self.k_p * (p_ref - pos_ee) \
+            + self.k_i * (v_ref - v_des)
             
-        for i in range(1, self.n_c):
+        for i in range(2, self.n_c):
             A[3*i:3*(i+1), self._id_ui(i)] = J_ee @ pinv(M)
             A[3*i:3*(i+1), self._id_qi(i)] = self.k_p * J_ee
             A[3*i:3*(i+1), self._id_vi(i)] = self.k_d * J_ee
@@ -190,7 +207,8 @@ class ControlTasks:
                 + J_ee @ pinv(M) @ h \
                 + a_ref \
                 + self.k_d * v_ref \
-                + self.k_p * (p_ref - pos_ee - J_ee @ self.q)
+                + self.k_p * (p_ref - pos_ee + J_ee @ self.q) \
+                + self.k_i * (v_ref - v_des)
             
         return A, b
     
@@ -202,7 +220,7 @@ class ControlTasks:
         for i in range(self.n_c):
             A[i*self.n_i:(i+1)*self.n_i, self._id_ui(i)] = np.eye(self.n_i)
             b[i*self.n_i:(i+1)*self.n_i] = np.zeros(self.n_i)
-            A[off+i*self.n_q:off+(i+1)*self.n_q, self._id_vi(i+1)] = np.eye(self.n_q)
+            A[off+i*self.n_q:off+(i+1)*self.n_q, self._id_vi(i+1)] = np.eye(self.n_q) * 0.01
             b[off+i*self.n_q:off+(i+1)*self.n_q] = np.zeros(self.n_q)
             
         return A, b
