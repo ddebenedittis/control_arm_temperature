@@ -86,6 +86,9 @@ class ControlTasksSS:
             self.v,
         )
         
+        self.compute_matrices_state()
+        self.compute_matrices_state_dot()
+        
     # ======================================================================= #
     
     def _compute_dyn_matrices(self):
@@ -108,20 +111,20 @@ class ControlTasksSS:
         
     def compute_matrices_state(self):
         self.A_state = AState(np.zeros((self.n_s * self.n_c, self.n_x)), self)
-        self.b_state = bState(np.zeros(self.A_state.shape[0]), self)
+        self.b_state = bState(np.zeros(self.A_state._A.shape[0]), self)
         
         A, B, f = self._compute_dyn_matrices()
         
         for i in range(1, self.n_c+1):
             self.b_state.si[i] += A**i @ np.concatenate((self.q, self.v, self.temp))
             
-            for j in range(i):
+            for j in range(1, i):
                 self.A_state.si[i, j] = A**(i-j-1) @ B
                 self.b_state.si[i]   += A**(i-j-1) @ f
                 
     def compute_matrices_state_dot(self):
         self.A_state_dot = AState(np.zeros((self.n_s * self.n_c, self.n_x)), self)
-        self.b_state_dot = bState(np.zeros(self.A_state.shape[0]), self)
+        self.b_state_dot = bState(np.zeros(self.A_state._A.shape[0]), self)
         
         M = self.robot_wrapper.mass(self.q)
         h = self.robot_wrapper.nle(self.q, self.v)
@@ -145,8 +148,6 @@ class ControlTasksSS:
         
         # Limit the maximum torques
         for i in range(self.n_c):
-            print(C[2*i*self.n_i:(2*i+1)*self.n_i, self._id_ui(i)])
-            print(np.eye(self.n_i))
             C[2*i*self.n_i:(2*i+1)*self.n_i, self._id_ui(i)] = np.eye(self.n_i)
             C[(2*i+1)*self.n_i:(2*i+2)*self.n_i, self._id_ui(i)] = - np.eye(self.n_i)
             d[2*i*self.n_i:(2*i+1)*self.n_i] = self.tau_max
@@ -210,7 +211,7 @@ class ControlTasksSS:
         b = np.zeros(A.shape[0])
         
         for i in range(self.n_c):
-            A[3*i:3*(i+1), self._id_ui(i)] = J_ee @ self.A_state_dot.vi[i+1]
+            A[3*i:3*(i+1), :] = J_ee @ self.A_state_dot.vi[i+1]
             b[3*i:3*(i+1)] = - J_ee @ self.b_state_dot.vi[i+1] \
                 - J_ee_dot_times_v \
                 + a_des
@@ -225,7 +226,7 @@ class ControlTasksSS:
         for i in range(self.n_c):
             A[i*self.n_i:(i+1)*self.n_i, self._id_ui(i)] = np.eye(self.n_i)
             b[i*self.n_i:(i+1)*self.n_i] = np.zeros(self.n_i)
-            A[off+i*self.n_q:off+(i+1)*self.n_q, self._id_vi(i+1)] = self.A_state.vi[i+1]
+            A[off+i*self.n_q:off+(i+1)*self.n_q, :] = self.A_state.vi[i+1]
             b[off+i*self.n_q:off+(i+1)*self.n_q] = - self.b_state.vi[i+1]
         
         return A, b

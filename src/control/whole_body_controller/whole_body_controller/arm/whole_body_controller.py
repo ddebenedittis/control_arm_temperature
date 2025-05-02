@@ -181,10 +181,8 @@ class WholeBodyController:
         pos_ref, vel_ref, acc_ref
     ):
         if self.ss:
-            print("Using SS")
             return self.wbc_ss(q, v, temp, pos_ref, vel_ref, acc_ref)
         else:
-            print("Using MS")
             return self.wbc_ms(q, v, temp, pos_ref, vel_ref, acc_ref)
 
     def get_ee_position(self):
