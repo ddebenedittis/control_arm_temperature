@@ -2,6 +2,8 @@ whole_body_controller:
     ros__parameters:
         task: point
 
+        single_shooting: False
+
         n_c: 1
 
         dt: 0.25

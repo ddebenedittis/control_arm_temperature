@@ -4,8 +4,10 @@ from scipy.linalg import pinv
 
 from robot_model.robot_wrapper import RobotWrapper
 
+from whole_body_controller.arm.dynamic_matrices_ss import AState, bState
 
-class ControlTasks:
+
+class ControlTasksSS:
     def __init__(self, robot_name):
         self.robot_name = robot_name
         self.robot_wrapper = RobotWrapper(robot_name)
@@ -17,7 +19,7 @@ class ControlTasks:
         self.n_q = self.robot_wrapper.nq    # n joint positions
         self.n_s = 3*self.n_q               # n_states = q, qdot, T
         self.n_i = self.n_q                 # n inputs = tau
-        self.n_x = self.n_s + self.n_i      # n states and inputs
+        self.n_x = self.n_i * self.n_c
         
         # ========================= Internal States ========================= #
         
@@ -33,6 +35,11 @@ class ControlTasks:
         
         # MPC timestep size
         self.dt = 0.01
+        
+        self.A_state = None
+        self.b_state = None
+        self.A_state_dot = None
+        self.b_state_dot = None
         
         # =================================================================== #
         
@@ -79,26 +86,8 @@ class ControlTasks:
             self.v,
         )
         
-    def task_eom(self):
-        """Generate the A and b matrices of the equations of motion task."""
-
-        A_dyn = np.zeros((self.n_c * self.n_s, self.n_x * self.n_c))
-        b_dyn = np.zeros(self.n_c * self.n_s)
-        
-        A, B, f = self._compute_dyn_matrices()
-        
-        A_dyn[0:self.n_s, self._id_ui(0)] = B
-        A_dyn[0:self.n_s, self._id_si(1)] = - np.eye(self.n_s)
-        b_dyn[0:self.n_s] = - A @ np.concatenate([self.q, self.v, self.temp]) - f
-        
-        for i in range(1, self.n_c):
-            A_dyn[i*self.n_s:(i+1)*self.n_s, self._id_si(i)] = A
-            A_dyn[i*self.n_s:(i+1)*self.n_s, self._id_ui(i)] = B
-            A_dyn[i*self.n_s:(i+1)*self.n_s, self._id_si(i+1)] = - np.eye(self.n_s)
-            b_dyn[i*self.n_s:(i+1)*self.n_s] = - f
-            
-        return A_dyn, b_dyn
-        
+    # ======================================================================= #
+    
     def _compute_dyn_matrices(self):
         M = self.robot_wrapper.mass(self.q)
         h = self.robot_wrapper.nle(self.q, self.v)
@@ -116,15 +105,48 @@ class ControlTasks:
         f[2*self.n_q:3*self.n_q] = self.alpha * self.dt * self.T_0
         
         return A, B, f
+        
+    def compute_matrices_state(self):
+        self.A_state = AState(np.zeros((self.n_s * self.n_c, self.n_x)), self)
+        self.b_state = bState(np.zeros(self.A_state.shape[0]), self)
+        
+        A, B, f = self._compute_dyn_matrices()
+        
+        for i in range(1, self.n_c+1):
+            self.b_state.si[i] += A**i @ np.concatenate((self.q, self.v, self.temp))
+            
+            for j in range(i):
+                self.A_state.si[i, j] = A**(i-j-1) @ B
+                self.b_state.si[i]   += A**(i-j-1) @ f
+                
+    def compute_matrices_state_dot(self):
+        self.A_state_dot = AState(np.zeros((self.n_s * self.n_c, self.n_x)), self)
+        self.b_state_dot = bState(np.zeros(self.A_state.shape[0]), self)
+        
+        M = self.robot_wrapper.mass(self.q)
+        h = self.robot_wrapper.nle(self.q, self.v)
+        
+        for i in range(self.n_c):
+            self.A_state_dot.vi[i+1, i] = pinv(M)
+            self.b_state_dot.vi[i+1] = pinv(M) @ h
+            
+            self.A_state_dot.Ti[i+1, i] = self.beta * np.sign(self.tau) * np.eye(self.n_q)
+            
+            self.A_state_dot.Ti[i+1] += - self.alpha * self.A_state.Ti[i+1]
+            self.b_state_dot.Ti[i+1] += - self.alpha * self.b_state.Ti[i+1]
+    
+    # ======================================================================= #
     
     def task_torque_limits(self):
         """Implement the torque limits task."""
         
-        C = np.zeros((4 * self.n_c * self.n_i, self.n_x * self.n_c))
-        d = np.zeros(4 * self.n_c * self.n_i)
+        C = np.zeros((4 * self.n_c * self.n_i, self.n_x))
+        d = np.zeros(C.shape[0])
         
         # Limit the maximum torques
         for i in range(self.n_c):
+            print(C[2*i*self.n_i:(2*i+1)*self.n_i, self._id_ui(i)])
+            print(np.eye(self.n_i))
             C[2*i*self.n_i:(2*i+1)*self.n_i, self._id_ui(i)] = np.eye(self.n_i)
             C[(2*i+1)*self.n_i:(2*i+2)*self.n_i, self._id_ui(i)] = - np.eye(self.n_i)
             d[2*i*self.n_i:(2*i+1)*self.n_i] = self.tau_max
@@ -141,24 +163,24 @@ class ControlTasks:
         return C, d
     
     def task_velocity_limits(self):
-        C = np.zeros((2 * self.n_c * self.n_q, self.n_x * self.n_c))
-        d = np.zeros(2 * self.n_c * self.n_q)
+        C = np.zeros((2 * self.n_c * self.n_q, self.n_x))
+        d = np.zeros(C.shape[0])
         
         for i in range(self.n_c):
-            C[i*self.n_q:(i+1)*self.n_q, self._id_vi(i+1)] = np.eye(self.n_q)
-            d[i*self.n_q:(i+1)*self.n_q] = 2.0
-            C[(i+1)*self.n_q:(i+2)*self.n_q, self._id_vi(i+1)] = - np.eye(self.n_q)
-            d[(i+1)*self.n_q:(i+2)*self.n_q] = 2.0
+            C[2*i*self.n_q:(2*i+1)*self.n_q, :] = self.A_state.vi[i+1]
+            d[2*i*self.n_q:(2*i+1)*self.n_q] = - self.b_state.vi[i+1] + 2.0
+            C[(2*i+1)*self.n_q:(2*i+2)*self.n_q, :] = - self.A_state.vi[i+1]
+            d[(2*i+1)*self.n_q:(2*i+2)*self.n_q] = self.b_state.vi[i+1] + 2.0
             
         return C, d
             
     def task_temperature_limits(self):
-        C = np.zeros((self.n_c * self.n_q, self.n_x * self.n_c))
-        d = np.zeros(self.n_c * self.n_q)
+        C = np.zeros((self.n_c * self.n_q, self.n_x))
+        d = np.zeros(C.shape[0])
         
         for i in range(self.n_c):
-            C[i*self.n_q:(i+1)*self.n_q, self._id_Ti(i+1)] = np.eye(self.n_q)
-            d[i*self.n_q:(i+1)*self.n_q] = self.T_max
+            C[i*self.n_q:(i+1)*self.n_q, :] = self.A_state.Ti[i+1]
+            d[i*self.n_q:(i+1)*self.n_q] = - self.b_state.Ti[i+1] + 2.0
             
         return C, d
             
@@ -182,33 +204,17 @@ class ControlTasks:
             pin.ReferenceFrame.LOCAL_WORLD_ALIGNED,
         ).linear
         
-        A = np.zeros((3*self.n_c, self.n_x * self.n_c))
-        b = np.zeros(3*self.n_c)
-        
-        A[0:3, self._id_ui(0)] = J_ee @ pinv(M)
-        
         a_des = a_ref + self.k_d * (v_ref - J_ee @ self.v) + self.k_p * (p_ref - pos_ee)
-        v_des = self.q + a_des * self.dt
         
-        b[0:3] = - J_ee_dot_times_v \
-            + J_ee @ pinv(M) @ h \
-            + a_ref \
-            + self.k_d * (v_ref - J_ee @ self.v) \
-            + self.k_p * (p_ref - pos_ee) \
-            + self.k_i * (v_ref - v_des)
-            
-        for i in range(2, self.n_c):
-            A[3*i:3*(i+1), self._id_ui(i)] = J_ee @ pinv(M)
-            A[3*i:3*(i+1), self._id_qi(i)] = self.k_p * J_ee
-            A[3*i:3*(i+1), self._id_vi(i)] = self.k_d * J_ee
-            
-            b[3*i:3*(i+1)] = - J_ee_dot_times_v \
-                + J_ee @ pinv(M) @ h \
-                + a_ref \
-                + self.k_d * v_ref \
-                + self.k_p * (p_ref - pos_ee + J_ee @ self.q) \
-                + self.k_i * (v_ref - v_des)
-            
+        A = np.zeros((3*self.n_c, self.n_x))
+        b = np.zeros(A.shape[0])
+        
+        for i in range(self.n_c):
+            A[3*i:3*(i+1), self._id_ui(i)] = J_ee @ self.A_state_dot.vi[i+1]
+            b[3*i:3*(i+1)] = - J_ee @ self.b_state_dot.vi[i+1] \
+                - J_ee_dot_times_v \
+                + a_des
+        
         return A, b
     
     def task_min_torques_qdot(self):
@@ -219,11 +225,10 @@ class ControlTasks:
         for i in range(self.n_c):
             A[i*self.n_i:(i+1)*self.n_i, self._id_ui(i)] = np.eye(self.n_i)
             b[i*self.n_i:(i+1)*self.n_i] = np.zeros(self.n_i)
-            A[off+i*self.n_q:off+(i+1)*self.n_q, self._id_vi(i+1)] = np.eye(self.n_q) * 0.01
-            b[off+i*self.n_q:off+(i+1)*self.n_q] = np.zeros(self.n_q)
-            
-        return A, b
+            A[off+i*self.n_q:off+(i+1)*self.n_q, self._id_vi(i+1)] = self.A_state.vi[i+1]
+            b[off+i*self.n_q:off+(i+1)*self.n_q] = - self.b_state.vi[i+1]
         
+        return A, b
         
     # ======================================================================= #
     

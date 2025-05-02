@@ -16,7 +16,10 @@ class WBCController(Node):
     def __init__(self):
         super().__init__('wbc_node')
         
-        self.wbc = WholeBodyController('arm')
+        self.declare_parameter('single_shooting', False)
+        self.ss = self.get_parameter('single_shooting').get_parameter_value().bool_value
+        
+        self.wbc = WholeBodyController('arm', ss=self.ss)
         
         self.k_p = 0.001
         self.k_d = 0.0001
@@ -189,9 +192,12 @@ class WBCController(Node):
         )
         
         tau_ff = sol.tau
-        tau = tau_ff \
-            + self.k_p * (sol.q - self.joint_positions) \
-            + self.k_d * (sol.v - self.joint_velocities)
+        if not self.ss:
+            tau = tau_ff \
+                + self.k_p * (sol.q - self.joint_positions) \
+                + self.k_d * (sol.v - self.joint_velocities)
+        else:
+            tau = tau_ff
         
         msg = Float64MultiArray()
         msg.data = tau.tolist()
