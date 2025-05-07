@@ -161,11 +161,11 @@ class WholeBodyController:
         C.append(None)
         d.append(None)
         
-        A_min, b_min = self._control_tasks.task_min_torques_qdot()
-        A.append(A_min)
-        b.append(b_min)
-        C.append(None)
-        d.append(None)
+        # A_min, b_min = self._control_tasks.task_min_torques_qdot()
+        # A.append(A_min)
+        # b.append(b_min)
+        # C.append(None)
+        # d.append(None)
         
         sol = self._hqp(A, b, C, d)
         

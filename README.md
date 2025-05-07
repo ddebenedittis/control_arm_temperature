@@ -47,7 +47,7 @@ Where the parameters have the following meanings
 - `use_rviz`: display the robot in rviz with some additional informations.
 - `use_yaml`: if `true`, use a yaml file (`src/control/whole_body_controller/config/arm_wbc.yaml`) instead of command line arguments to set the parameters of the simulation. If `False`, the following parameters are used:
   - `task`: the reference is a stationary point (`point`) or a circle `cirlce`.
-  - `single_shooting`:
+  - `single_shooting`: if `True`, single-shooting is used. With single-shooting, gains of `kp=1000` and `kd=1000` work well. With multiple-shooting (single_shooting=False), `kp=1000` and `kd=1000` work well too.
   - `nc`: MPC prediction horizon.
   - `dt`: time step of the simulation.
   - `kp`: proportional gain of the MPC controller.
