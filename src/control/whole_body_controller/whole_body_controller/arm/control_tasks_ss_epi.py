@@ -4,20 +4,13 @@ from scipy.linalg import pinv
 
 from robot_model.robot_wrapper import RobotWrapper
 
-from whole_body_controller.arm.dynamic_matrices_ss import AState, bState
+from whole_body_controller.arm.control_tasks_ss import ControlTasksSS
+from whole_body_controller.arm.dynamic_matrices_ss_epi import AState, bState
 
 
-"""
-All linear tasks are writen in the form:
-    A x = b
-    C x <= d
-"""
-
-
-class ControlTasksSS:
+class ControlTasksSSEpi(ControlTasksSS):
     def __init__(self, robot_name):
-        self.robot_name = robot_name
-        self.robot_wrapper = RobotWrapper(robot_name)
+        super().__init__(robot_name)
         
         # ============================== Sizes ============================== #
         
@@ -26,61 +19,9 @@ class ControlTasksSS:
         self.n_q = self.robot_wrapper.nq    # n joint positions
         self.n_s = 3*self.n_q               # n_states = q, qdot, T
         self.n_i = self.n_q                 # n inputs = tau
-        self.n_x = self.n_i
+        self.n_a = self.n_q                 # n auxiliary variables
+        self.n_x = self.n_i + self.n_a
         self.n_x_opt = self.n_x * self.n_c
-        
-        # ========================= Internal States ========================= #
-        
-        # Joint positions and velocities
-        self.q = np.zeros(self.n_q)
-        self.v = np.zeros(self.n_q)
-        self.temp = np.zeros(self.n_q)
-        
-        # Temperature coefficients: T_k+1 = (1 - alpha dt) T_k + beta |tau|
-        self.alpha = 0.1
-        self.beta = 0.01
-        self.T_0 = np.ones(self.n_q) * 25
-        
-        # MPC timestep size
-        self.dt = 0.01
-        self.Ts = 0.01
-        
-        self.A_state = None
-        self.b_state = None
-        self.A_state_dot = None
-        self.b_state_dot = None
-        
-        # =================================================================== #
-        
-        # Previous optimal torques
-        # TODO: update at the end
-        self.tau = np.zeros(self.n_q)
-        
-        # ============================== Limits ============================= #
-        
-        self.tau_max = 10
-        self.tau_min = -10
-        self.delta_tau_max =  10 * self.Ts
-        self.delta_tau_min = -10 * self.Ts
-        
-        self.T_max = 40
-        
-        # ============================== Gains ============================== #
-        
-        self.k_p = 10.0
-        self.k_d = 10.0
-        self.k_i = 0.0
-        
-    @property
-    def n_c(self):
-        return self._n_c
-    
-    @n_c.setter
-    def n_c(self, n_c):
-        if n_c < 1:
-            raise ValueError("n_c must be greater than 0")
-        self._n_c = n_c
-        self.n_x_opt = self.n_i * self._n_c
              
     def update(self, q: np.ndarray, v: np.ndarray, temp: np.ndarray):
         """Update the dynamic and kinematic quantities in Pinocchio."""
@@ -120,9 +61,9 @@ class ControlTasksSS:
         A[0:self.n_q, self.n_q:2*self.n_q] = np.eye(self.n_q) * self.dt
         A[2*self.n_q:3*self.n_q, 2*self.n_q:3*self.n_q] = (1 - self.alpha * self.dt) * np.eye(self.n_q)
         
-        B = np.zeros((self.n_s, self.n_i))
+        B = np.zeros((self.n_s, self.n_i + self.n_a))
         B[self.n_q:2*self.n_q, 0:self.n_q] = pinv(M) * self.dt
-        B[2*self.n_q:3*self.n_q, 0:self.n_q] = self.beta * self.dt * np.sign(self.tau) * np.eye(self.n_q)
+        B[2*self.n_q:3*self.n_q, self.n_q:self.n_q+self.n_a] = self.beta * self.dt * np.sign(self.tau) * np.eye(self.n_q)
         
         f = np.zeros(self.n_s)
         f[self.n_q:2*self.n_q] = - pinv(M) @ h * self.dt
@@ -153,7 +94,8 @@ class ControlTasksSS:
             for j in range(i):
                 self.A_state.si[i, j] = np.linalg.matrix_power(A, i-j-1) @ B
                 self.b_state.si[i]   += np.linalg.matrix_power(A, i-j-1) @ f
-                
+
+    # TODO: make this more general: there is a double indexing in some matrices.
     def compute_matrices_state_dot(self):
         self.A_state_dot = AState(np.zeros((self.n_s * self.n_c, self.n_x_opt)), self)
         self.b_state_dot = bState(np.zeros(self.A_state._A.shape[0]), self)
@@ -162,16 +104,30 @@ class ControlTasksSS:
         h = self.robot_wrapper.nle(self.q, self.v)
         
         for i in range(self.n_c):
-            self.A_state_dot.vi[i+1, i] = pinv(M)
+            self.A_state_dot.vi[i+1, i][:, 0:self.n_q] = pinv(M)
             self.b_state_dot.vi[i+1] = pinv(M) @ h
             
-            self.A_state_dot.Ti[i+1, i] = self.beta * np.sign(self.tau) * np.eye(self.n_q)
+            self.A_state_dot.Ti[i+1, i][:, self.n_q:2*self.n_q] = self.beta * np.eye(self.n_q)
             
             self.A_state_dot.Ti[i+1] += - self.alpha * self.A_state.Ti[i+1]
             self.b_state_dot.Ti[i+1] += - self.alpha * self.b_state.Ti[i+1]
     
     # ======================================================================= #
     
+    def task_torque_slack(self):
+        """Enforce constraints on the epigraph torque."""
+        
+        C = np.zeros((2* self.n_c * self.n_i, self.n_x_opt))
+        d = np.zeros(C.shape[0])
+        
+        for i in range(self.n_c):
+            C[2*i*self.n_i:(2*i+1)*self.n_i, self._id_ui(i)] = np.eye(self.n_i)
+            C[2*i*self.n_i:(2*i+1)*self.n_i, self._id_tau_sl(i)] = - np.eye(self.n_i)
+            C[(2*i+1)*self.n_i:(2*i+2)*self.n_i, self._id_ui(i)] = - np.eye(self.n_i)
+            C[(2*i+1)*self.n_i:(2*i+2)*self.n_i, self._id_tau_sl(i)] = - np.eye(self.n_i)
+            
+        return C, d
+
     def task_torque_limits(self):
         """Implement the torque limits task."""
         
@@ -272,6 +228,15 @@ class ControlTasksSS:
         return np.arange(
             i*self.n_i,
             (i+1)*self.n_i,
+        )
+        
+    def _id_tau_sl(self, i):
+        if i < 0 or i > self.n_c-1:
+            raise ValueError("i must be in [0, n_c-1]")
+        
+        return np.arange(
+            i*self.n_i + self.n_i,
+            i*self.n_i + self.n_i + self.n_a,
         )
 
     # ======================================================================= #

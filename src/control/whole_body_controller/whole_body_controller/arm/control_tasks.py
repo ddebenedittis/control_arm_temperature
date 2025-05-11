@@ -138,6 +138,20 @@ class ControlTasks:
             d[off+2*i*self.n_i:off+(2*i+1)*self.n_i] = self.delta_tau_max + self.tau
             d[off+(2*i+1)*self.n_i:off+(2*i+2)*self.n_i] = - self.delta_tau_min - self.tau
             
+        # C2 = np.zeros((2 * (self.n_c - 1) * self.n_i, self.n_x * self.n_c))
+        # d2 = np.zeros(2 * (self.n_c - 1) * self.n_i)
+        
+        # for i in range(self.n_c - 1):
+        #     C2[i*self.n_i:(i+1)*self.n_i, self._id_ui(i+1)] = np.eye(self.n_i)
+        #     C2[i*self.n_i:(i+1)*self.n_i, self._id_ui(i)] = - np.eye(self.n_i)
+        #     d2[i*self.n_i:(i+1)*self.n_i] = self.delta_tau_max * 0.01
+        #     C2[(i+1)*self.n_i:(i+2)*self.n_i, self._id_ui(i+1)] = - np.eye(self.n_i)
+        #     C2[(i+1)*self.n_i:(i+2)*self.n_i, self._id_ui(i)] = np.eye(self.n_i)
+        #     d2[(i+1)*self.n_i:(i+2)*self.n_i] = - self.delta_tau_min * 0.01
+            
+        # C = np.vstack((C, C2))
+        # d = np.hstack((d, d2))
+            
         return C, d
     
     def task_velocity_limits(self):
@@ -226,6 +240,11 @@ class ControlTasks:
         
         
     # ======================================================================= #
+    
+    # The optimization vector is
+    # [u_0, q_1, v_1, T_1, u_1, q_2, v_2, T_2, ..., u_{n_c-1}, q_n_c, v_n_c, T_n_c]
+    # Or, more compactly:
+    # [u_0, s_1, u_1, s_2, ..., u_{n_c-1}, s_n_c]
     
     def _id_ui(self, i):
         if i < 0 or i > self.n_c-1:

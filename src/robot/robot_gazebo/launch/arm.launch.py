@@ -50,6 +50,7 @@ def generate_launch_description():
     
     log = LaunchConfiguration('log', default='False')
     ss = LaunchConfiguration('single_shooting', default='False')
+    epi = LaunchConfiguration('epigraph', default='False')
     task = LaunchConfiguration('task', default='point')
     use_rviz = LaunchConfiguration('use_rviz', default='False')
     
