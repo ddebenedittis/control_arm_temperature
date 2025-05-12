@@ -60,8 +60,8 @@ class ControlTasksSS:
         
         self.tau_max = 10
         self.tau_min = -10
-        self.delta_tau_max =  10 * self.Ts
-        self.delta_tau_min = -10 * self.Ts
+        self.delta_tau_max =  2.5 * self.Ts
+        self.delta_tau_min = -2.5 * self.Ts
         
         self.T_max = 40
         
@@ -175,7 +175,7 @@ class ControlTasksSS:
     def task_torque_limits(self):
         """Implement the torque limits task."""
         
-        C = np.zeros((2 * self.n_c * self.n_i, self.n_x_opt))
+        C = np.zeros((4 * self.n_c * self.n_i, self.n_x_opt))
         d = np.zeros(C.shape[0])
         
         # Limit the maximum torques
@@ -186,12 +186,12 @@ class ControlTasksSS:
             d[(2*i+1)*self.n_i:(2*i+2)*self.n_i] = - self.tau_min
             
         # Limit the maximum torques variation w.r.t. the previous timestep
-        # off = 2*self.n_c*self.n_i
-        # for i in range(self.n_c):
-        #     C[off+2*i*self.n_i:off+(2*i+1)*self.n_i, self._id_ui(i)] = np.eye(self.n_i)
-        #     C[off+(2*i+1)*self.n_i:off+(2*i+2)*self.n_i, self._id_ui(i)] = - np.eye(self.n_i)
-        #     d[off+2*i*self.n_i:off+(2*i+1)*self.n_i] = self.delta_tau_max + self.tau
-        #     d[off+(2*i+1)*self.n_i:off+(2*i+2)*self.n_i] = - self.delta_tau_min - self.tau
+        off = 2*self.n_c*self.n_i
+        for i in range(self.n_c):
+            C[off+2*i*self.n_i:off+(2*i+1)*self.n_i, self._id_ui(i)] = np.eye(self.n_i)
+            C[off+(2*i+1)*self.n_i:off+(2*i+2)*self.n_i, self._id_ui(i)] = - np.eye(self.n_i)
+            d[off+2*i*self.n_i:off+(2*i+1)*self.n_i] = self.delta_tau_max + self.tau
+            d[off+(2*i+1)*self.n_i:off+(2*i+2)*self.n_i] = - self.delta_tau_min - self.tau
             
         return C, d
     
@@ -213,7 +213,7 @@ class ControlTasksSS:
         
         for i in range(self.n_c):
             C[i*self.n_q:(i+1)*self.n_q, :] = self.A_state.Ti[i+1]
-            d[i*self.n_q:(i+1)*self.n_q] = - self.b_state.Ti[i+1] + 2.0
+            d[i*self.n_q:(i+1)*self.n_q] = - self.b_state.Ti[i+1] + self.T_max
             
         return C, d
             
