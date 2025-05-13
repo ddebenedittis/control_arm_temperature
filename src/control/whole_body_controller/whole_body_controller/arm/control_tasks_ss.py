@@ -67,6 +67,8 @@ class ControlTasksSS:
         
         # ============================== Gains ============================== #
         
+        self.cbf_gamma = 10.0
+        
         self.k_p = 10.0
         self.k_d = 10.0
         self.k_i = 0.0

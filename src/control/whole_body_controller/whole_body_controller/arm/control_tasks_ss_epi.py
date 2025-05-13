@@ -173,6 +173,21 @@ class ControlTasksSSEpi(ControlTasksSS):
             d[i*self.n_q:(i+1)*self.n_q] = - self.b_state.Ti[i+1] + self.T_max
             
         return C, d
+    
+    def task_temperature_limits_cbf(self):
+        # if self.cbf_gamma <= self.alpha:
+        #     raise ValueError("Choose cbf_gamma > alpha")
+        
+        C = np.zeros((self.n_c * self.n_q, self.n_x_opt))
+        d = np.zeros(C.shape[0])
+        
+        for i in range(self.n_c):
+            C[i*self.n_q:(i+1)*self.n_q, :] = self.A_state.Ti[i+1] * (self.cbf_gamma + self.alpha)
+            C[i*self.n_q:(i+1)*self.n_q, self._id_tau_sl(i)] += - self.beta * np.eye(self.n_q)
+            d[i*self.n_q:(i+1)*self.n_q] = self.cbf_gamma * self.T_max \
+                - (self.cbf_gamma + self.alpha) * self.b_state.Ti[i+1]
+            
+        return C, d
             
     def task_motion_ref(self, p_ref, v_ref, a_ref):
         # Only the first two components are controllable in a planar manipulator.
@@ -236,8 +251,8 @@ class ControlTasksSSEpi(ControlTasksSS):
             raise ValueError("i must be in [0, n_c-1]")
         
         return np.arange(
-            i*self.n_i + self.n_i,
-            i*self.n_i + self.n_i + self.n_a,
+            i*self.n_x + self.n_i,
+            i*self.n_x + self.n_i + self.n_a,
         )
 
     # ======================================================================= #

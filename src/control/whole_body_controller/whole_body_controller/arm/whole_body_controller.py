@@ -37,9 +37,15 @@ class SolutionSS:
     
 
 class WholeBodyController:
-    def __init__(self, robot_name, ss: bool = False, epi: bool = False):
+    def __init__(
+        self, robot_name,
+        ss: bool = False,
+        epi: bool = False,
+        cbf: bool = False,
+    ):
         self.ss = ss
         self.epi = epi
+        self.cbf = cbf
         
         if ss:
             if epi:
@@ -204,7 +210,10 @@ class WholeBodyController:
         C.append(C_torque)
         d.append(d_torque)
         
-        C_temp, d_temp = self._control_tasks.task_temperature_limits()
+        if self.cbf:
+            C_temp, d_temp = self._control_tasks.task_temperature_limits_cbf()
+        else:
+            C_temp, d_temp = self._control_tasks.task_temperature_limits()
         A.append(None)
         b.append(None)
         C.append(C_temp)

@@ -49,6 +49,7 @@ Where the parameters have the following meanings
   - `task`: the reference is a stationary point (`point`) or a circle `cirlce`.
   - `single_shooting`: if `True`, single-shooting is used. With single-shooting, gains of `kp=1000` and `kd=1000` work well. With multiple-shooting (single_shooting=False), `kp=1000` and `kd=1000` work well too.
   - `epi`: if `True`, use epigraph optimization for the torques. Currently not implemented for multiple shooting.
+  - `cbf`: if `True`, use control barrier functions to ensure the robot does not fall. Currently implemented only for `single_shooting` and `epi`.
   - `nc`: MPC prediction horizon.
   - `dt`: time step of the simulation.
   - `kp`: proportional gain of the MPC controller.

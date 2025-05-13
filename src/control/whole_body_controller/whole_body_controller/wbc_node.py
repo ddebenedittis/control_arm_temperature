@@ -22,7 +22,10 @@ class WBCController(Node):
         self.declare_parameter('epigraph', False)
         self.epi = self.get_parameter('epigraph').get_parameter_value().bool_value
         
-        self.wbc = WholeBodyController('arm', ss=self.ss, epi=self.epi)
+        self.declare_parameter('cbf', False)
+        self.cbf = self.get_parameter('cbf').get_parameter_value().bool_value
+        
+        self.wbc = WholeBodyController('arm', ss=self.ss, epi=self.epi, cbf=self.cbf)
         
         self.k_p = 0.001
         self.k_d = 0.0001
