@@ -14,7 +14,7 @@ class _BlockAccessor:
             ids = self._id_fn(i)
             ids2 = self._id_fn2(j)
             if self._axis == 1:
-                return self._array[np.ix_(ids, ids2)]
+                return self._array[ids[0]:ids[-1]+1, ids2[0]:ids2[-1]+1]
             else:
                 raise ValueError("2D indexing not supported on 1D array")
         else:
@@ -27,7 +27,7 @@ class _BlockAccessor:
             ids = self._id_fn(i)
             ids2 = self._id_fn2(j)
             if self._axis == 1:
-                self._array[np.ix_(ids, ids2)] = value
+                self._array[ids[0]:ids[-1]+1, ids2[0]:ids2[-1]+1] = value
             else:
                 raise ValueError("2D indexing not supported on 1D array")
         else:
