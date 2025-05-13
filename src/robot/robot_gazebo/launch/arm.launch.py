@@ -131,6 +131,7 @@ def generate_launch_description():
             {'use_sim_time': True},
             {'task': task},
             {'single_shooting': ss},
+            {'epigraph': epi},
             {'nc': nc},
             {'dt': dt},
             {'kp': kp},
@@ -195,6 +196,7 @@ def generate_launch_description():
     return LaunchDescription([
         DeclareLaunchArgument('log', default_value='False'),
         DeclareLaunchArgument('single_shooting', default_value='False'),
+        DeclareLaunchArgument('epigraph', default_value='False'),
         DeclareLaunchArgument('task', default_value='point'),
         DeclareLaunchArgument('use_rviz', default_value='False'),
         DeclareLaunchArgument('use_yaml', default_value='False'),

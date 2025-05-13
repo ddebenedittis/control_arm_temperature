@@ -2,8 +2,6 @@ import numpy as np
 import pinocchio as pin
 from scipy.linalg import pinv
 
-from robot_model.robot_wrapper import RobotWrapper
-
 from whole_body_controller.arm.control_tasks_ss import ControlTasksSS
 from whole_body_controller.arm.dynamic_matrices_ss_epi import AState, bState
 
@@ -22,7 +20,18 @@ class ControlTasksSSEpi(ControlTasksSS):
         self.n_a = self.n_q                 # n auxiliary variables
         self.n_x = self.n_i + self.n_a
         self.n_x_opt = self.n_x * self.n_c
-             
+    
+    @property
+    def n_c(self):
+        return self._n_c
+    
+    @n_c.setter
+    def n_c(self, n_c):
+        if n_c < 1:
+            raise ValueError("n_c must be greater than 0")
+        self._n_c = n_c
+        self.n_x_opt = self.n_x * self._n_c
+    
     def update(self, q: np.ndarray, v: np.ndarray, temp: np.ndarray):
         """Update the dynamic and kinematic quantities in Pinocchio."""
         
@@ -61,9 +70,9 @@ class ControlTasksSSEpi(ControlTasksSS):
         A[0:self.n_q, self.n_q:2*self.n_q] = np.eye(self.n_q) * self.dt
         A[2*self.n_q:3*self.n_q, 2*self.n_q:3*self.n_q] = (1 - self.alpha * self.dt) * np.eye(self.n_q)
         
-        B = np.zeros((self.n_s, self.n_i + self.n_a))
+        B = np.zeros((self.n_s, self.n_x))
         B[self.n_q:2*self.n_q, 0:self.n_q] = pinv(M) * self.dt
-        B[2*self.n_q:3*self.n_q, self.n_q:self.n_q+self.n_a] = self.beta * self.dt * np.sign(self.tau) * np.eye(self.n_q)
+        B[2*self.n_q:3*self.n_q, self.n_q:self.n_q+self.n_a] = self.beta * self.dt * np.eye(self.n_q)
         
         f = np.zeros(self.n_s)
         f[self.n_q:2*self.n_q] = - pinv(M) @ h * self.dt
@@ -121,9 +130,9 @@ class ControlTasksSSEpi(ControlTasksSS):
         d = np.zeros(C.shape[0])
         
         for i in range(self.n_c):
-            C[2*i*self.n_i:(2*i+1)*self.n_i, self._id_ui(i)] = np.eye(self.n_i)
+            C[2*i*self.n_i:(2*i+1)*self.n_i, self._id_taui(i)] = np.eye(self.n_i)
             C[2*i*self.n_i:(2*i+1)*self.n_i, self._id_tau_sl(i)] = - np.eye(self.n_i)
-            C[(2*i+1)*self.n_i:(2*i+2)*self.n_i, self._id_ui(i)] = - np.eye(self.n_i)
+            C[(2*i+1)*self.n_i:(2*i+2)*self.n_i, self._id_taui(i)] = - np.eye(self.n_i)
             C[(2*i+1)*self.n_i:(2*i+2)*self.n_i, self._id_tau_sl(i)] = - np.eye(self.n_i)
             
         return C, d
@@ -136,18 +145,10 @@ class ControlTasksSSEpi(ControlTasksSS):
         
         # Limit the maximum torques
         for i in range(self.n_c):
-            C[2*i*self.n_i:(2*i+1)*self.n_i, self._id_ui(i)] = np.eye(self.n_i)
-            C[(2*i+1)*self.n_i:(2*i+2)*self.n_i, self._id_ui(i)] = - np.eye(self.n_i)
+            C[2*i*self.n_i:(2*i+1)*self.n_i, self._id_taui(i)] = np.eye(self.n_i)
+            C[(2*i+1)*self.n_i:(2*i+2)*self.n_i, self._id_taui(i)] = - np.eye(self.n_i)
             d[2*i*self.n_i:(2*i+1)*self.n_i] = self.tau_max
             d[(2*i+1)*self.n_i:(2*i+2)*self.n_i] = - self.tau_min
-            
-        # Limit the maximum torques variation w.r.t. the previous timestep
-        # off = 2*self.n_c*self.n_i
-        # for i in range(self.n_c):
-        #     C[off+2*i*self.n_i:off+(2*i+1)*self.n_i, self._id_ui(i)] = np.eye(self.n_i)
-        #     C[off+(2*i+1)*self.n_i:off+(2*i+2)*self.n_i, self._id_ui(i)] = - np.eye(self.n_i)
-        #     d[off+2*i*self.n_i:off+(2*i+1)*self.n_i] = self.delta_tau_max + self.tau
-        #     d[off+(2*i+1)*self.n_i:off+(2*i+2)*self.n_i] = - self.delta_tau_min - self.tau
             
         return C, d
     
@@ -169,7 +170,7 @@ class ControlTasksSSEpi(ControlTasksSS):
         
         for i in range(self.n_c):
             C[i*self.n_q:(i+1)*self.n_q, :] = self.A_state.Ti[i+1]
-            d[i*self.n_q:(i+1)*self.n_q] = - self.b_state.Ti[i+1] + 2.0
+            d[i*self.n_q:(i+1)*self.n_q] = - self.b_state.Ti[i+1] + self.T_max
             
         return C, d
             
@@ -212,7 +213,7 @@ class ControlTasksSSEpi(ControlTasksSS):
         
         off = self.n_i * self.n_c
         for i in range(self.n_c):
-            A[i*self.n_i:(i+1)*self.n_i, self._id_ui(i)] = np.eye(self.n_i)
+            A[i*self.n_i:(i+1)*self.n_i, self._id_taui(i)] = np.eye(self.n_i)
             b[i*self.n_i:(i+1)*self.n_i] = np.zeros(self.n_i)
             A[off+i*self.n_q:off+(i+1)*self.n_q, :] = self.A_state.vi[i+1]
             b[off+i*self.n_q:off+(i+1)*self.n_q] = - self.b_state.vi[i+1]
@@ -221,13 +222,13 @@ class ControlTasksSSEpi(ControlTasksSS):
         
     # ======================================================================= #
     
-    def _id_ui(self, i):
+    def _id_taui(self, i):
         if i < 0 or i > self.n_c-1:
             raise ValueError("i must be in [0, n_c-1]")
         
         return np.arange(
-            i*self.n_i,
-            (i+1)*self.n_i,
+            i*self.n_x,
+            i*self.n_x + self.n_i,
         )
         
     def _id_tau_sl(self, i):

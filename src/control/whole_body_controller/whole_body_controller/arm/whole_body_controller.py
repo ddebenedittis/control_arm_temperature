@@ -2,6 +2,7 @@ from hierarchical_qp.hierarchical_qp import HierarchicalQP
 
 from whole_body_controller.arm.control_tasks import ControlTasks
 from whole_body_controller.arm.control_tasks_ss import ControlTasksSS
+from whole_body_controller.arm.control_tasks_ss_epi import ControlTasksSSEpi
 
 
 class SolutionMS:
@@ -36,11 +37,15 @@ class SolutionSS:
     
 
 class WholeBodyController:
-    def __init__(self, robot_name, ss: bool = False):
+    def __init__(self, robot_name, ss: bool = False, epi: bool = False):
         self.ss = ss
+        self.epi = epi
         
         if ss:
-            self._control_tasks = ControlTasksSS(robot_name)
+            if epi:
+                self._control_tasks = ControlTasksSSEpi(robot_name)
+            else:
+                self._control_tasks = ControlTasksSS(robot_name)
         else:
             self._control_tasks = ControlTasks(robot_name)
         self._control_tasks.n_c = 1
@@ -175,12 +180,66 @@ class WholeBodyController:
         
         return self._solution
     
+    def wbc_ss_epi(
+        self,
+        q, v, temp,
+        pos_ref, vel_ref, acc_ref
+    ):
+        self.update(q, v, temp)
+        
+        A = []
+        b = []
+        C = []
+        d = []
+        
+        C_sl, d_sl = self._control_tasks.task_torque_slack()
+        A.append(None)
+        b.append(None)
+        C.append(C_sl)
+        d.append(d_sl)
+        
+        C_torque, d_torque = self._control_tasks.task_torque_limits()
+        A.append(None)
+        b.append(None)
+        C.append(C_torque)
+        d.append(d_torque)
+        
+        C_temp, d_temp = self._control_tasks.task_temperature_limits()
+        A.append(None)
+        b.append(None)
+        C.append(C_temp)
+        d.append(d_temp)
+        
+        C_vel_lim, d_vel_lim = self._control_tasks.task_velocity_limits()
+        A.append(None)
+        b.append(None)
+        C.append(C_vel_lim)
+        d.append(d_vel_lim)
+        
+        A_ref, b_ref = self._control_tasks.task_motion_ref(
+            pos_ref, vel_ref, acc_ref
+        )
+        A.append(A_ref)
+        b.append(b_ref)
+        C.append(None)
+        d.append(None)
+        
+        sol = self._hqp(A, b, C, d)
+        
+        self._solution.sol = sol
+        
+        self._control_tasks.tau = self._solution.tau
+        
+        return self._solution
+    
     def __call__(
         self,
         q, v, temp,
         pos_ref, vel_ref, acc_ref
     ):
         if self.ss:
+            if self.epi:
+                return self.wbc_ss_epi(q, v, temp, pos_ref, vel_ref, acc_ref)
             return self.wbc_ss(q, v, temp, pos_ref, vel_ref, acc_ref)
         else:
             return self.wbc_ms(q, v, temp, pos_ref, vel_ref, acc_ref)

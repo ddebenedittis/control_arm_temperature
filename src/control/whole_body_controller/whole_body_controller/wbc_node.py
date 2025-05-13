@@ -19,7 +19,10 @@ class WBCController(Node):
         self.declare_parameter('single_shooting', False)
         self.ss = self.get_parameter('single_shooting').get_parameter_value().bool_value
         
-        self.wbc = WholeBodyController('arm', ss=self.ss)
+        self.declare_parameter('epigraph', False)
+        self.epi = self.get_parameter('epigraph').get_parameter_value().bool_value
+        
+        self.wbc = WholeBodyController('arm', ss=self.ss, epi=self.epi)
         
         self.k_p = 0.001
         self.k_d = 0.0001
