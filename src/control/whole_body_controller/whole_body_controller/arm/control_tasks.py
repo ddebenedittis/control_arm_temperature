@@ -28,7 +28,7 @@ class ControlTasks:
         
         # Temperature coefficients: T_k+1 = (1 - alpha dt) T_k + beta |tau|
         self.alpha = 0.1
-        self.beta = 0.01
+        self.beta = 10.0
         self.T_0 = np.ones(self.n_q) * 25
         
         # MPC timestep size
