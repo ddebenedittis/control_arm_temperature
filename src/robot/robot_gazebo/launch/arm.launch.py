@@ -48,6 +48,8 @@ def generate_launch_description():
     
     # ======================================================================= #
     
+    time = LaunchConfiguration('time', default=datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S"))
+    
     log = LaunchConfiguration('log', default='False')
     ss = LaunchConfiguration('single_shooting', default='False')
     epi = LaunchConfiguration('epigraph', default='False')
@@ -169,7 +171,10 @@ def generate_launch_description():
         condition=IfCondition(log),
         package="logger",
         executable="logger",
-        parameters=[{'use_sim_time': True}],
+        parameters=[
+            {'time': LaunchConfiguration('time')},
+            {'use_sim_time': True}
+        ],
         output='screen',
         emulate_tty=True,
     )
@@ -196,6 +201,7 @@ def generate_launch_description():
     )
 
     return LaunchDescription([
+        DeclareLaunchArgument('time', default_value=datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")),
         DeclareLaunchArgument('log', default_value='False'),
         DeclareLaunchArgument('single_shooting', default_value='False'),
         DeclareLaunchArgument('epigraph', default_value='False'),
