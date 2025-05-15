@@ -26,6 +26,8 @@ class Plot:
             return r"Torques [Nm]"
         if name == "temperatures":
             return r"Temperatures [°C]"
+        if name == "ee_position":
+            return r"End-Effector Position [m]"
 
         return name
         
@@ -33,7 +35,7 @@ class Plot:
         times = self.npzfile['times']
         
         for name in sorted(self.npzfile.files):
-            if name == 'times':
+            if name == 'times' or name == 'reference_position':
                 continue
             
             arr = self.npzfile[name]
@@ -44,6 +46,10 @@ class Plot:
             plt.xlabel('Time [s]')
             plt.ylabel(self.process_y_axis_labels(name))
             plt.xlim([times[0], times[-1]])
+            
+            if name == 'ee_position':
+                arr2 = self.npzfile['reference_position']
+                plt.plot(times, arr2, linestyle=':', color='black', alpha=0.5)
             
             plt.legend(self.joint_names)
             

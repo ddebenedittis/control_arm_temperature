@@ -120,11 +120,11 @@ class WholeBodyController:
         C.append(C_torque)
         d.append(d_torque)
         
-        # C_temp, d_temp = self._control_tasks.task_temperature_limits()
-        # A.append(None)
-        # b.append(None)
-        # C.append(C_temp)
-        # d.append(d_temp)
+        C_temp, d_temp = self._control_tasks.task_temperature_limits()
+        A.append(None)
+        b.append(None)
+        C.append(C_temp)
+        d.append(d_temp)
         
         C_vel_lim, d_vel_lim = self._control_tasks.task_velocity_limits()
         A.append(None)
