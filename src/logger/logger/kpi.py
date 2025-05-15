@@ -12,17 +12,22 @@ class KPI:
 
         self.npzfile = np.load(f"{self.foldername}/csv/{self.subdir}/log.npz")
         
-    def compute_ee_rmse(self):
+    def compute_ee_error(self):
         ee_position = self.npzfile['ee_position']
         reference_position = self.npzfile['reference_position']
         
         # Compute the RMSE for each dimension (x, y, z)
         errors = ee_position - reference_position
         squared_errors = np.square(errors)
-        mean_squared_errors = np.mean(squared_errors, axis=0)
-        rmse = np.sqrt(mean_squared_errors)
+        mean_squared_error = np.mean(np.sum(squared_errors, axis=1))
+        rmse = np.sqrt(mean_squared_error)
         
-        return rmse
+        # Compute the max error
+        max_error = np.max(
+            np.sqrt(np.sum(squared_errors, axis=1))
+        )
+        
+        return rmse, max_error
     
     def compute_temp_max_and_mean(self):
         temp = self.npzfile['temperatures']
@@ -31,8 +36,9 @@ class KPI:
         return temp_max, temp_mean
     
     def print_all_kpi(self):
-        rmse = self.compute_ee_rmse()
-        print(f"RMSE for end-effector position: {rmse}")
+        rmse, max_error = self.compute_ee_error()
+        print(f"End-effector position RMSE: {rmse}")
+        print(f"End-effector position max error: {max_error}")
         
         temp_max, temp_mean = self.compute_temp_max_and_mean()
         print(f"Max temperatures: {temp_max}")
