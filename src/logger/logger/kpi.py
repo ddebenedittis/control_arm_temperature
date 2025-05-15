@@ -46,26 +46,23 @@ class KPI:
     
     
 def main():
-    # Get the number of folders to process and create the output directories
+    # Get list of subdirectories and sort them
     rootdir_csv = "log/csv"
-    n_to_process = 0
-    for file in os.listdir(rootdir_csv):
-        d = os.path.join(rootdir_csv, file)
-        if os.path.isdir(d):
-            n_to_process += 1
+    subdirs = sorted([
+        d for d in os.listdir(rootdir_csv)
+        if os.path.isdir(os.path.join(rootdir_csv, d))
+    ])
 
-    # Process each folder
-    counter = 0
-    for file in os.listdir(rootdir_csv):
-        d = os.path.join(rootdir_csv, file)
-        if os.path.isdir(d):
-            counter += 1
-            print(f"\nProcessing the {counter}-th folder out of {n_to_process} total folders ({file})...")
+    n_to_process = len(subdirs)
 
-            try:
-                plot = KPI(file)
-                plot.print_all_kpi()
-            except Exception as e:
-                print(f"Pass")
+    # Process each folder in sorted order
+    for counter, folder in enumerate(subdirs, 1):
+        print(f"\nProcessing the {counter}-th folder out of {n_to_process} total folders ({folder})...")
+
+        try:
+            plot = KPI(folder)
+            plot.print_all_kpi()
+        except Exception as e:
+            print(f"Pass")
 
     print("\nFinished.\n")
