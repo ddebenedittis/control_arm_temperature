@@ -42,10 +42,22 @@ class WholeBodyController:
         ss: bool = False,
         epi: bool = False,
         cbf: bool = False,
+        hqp: bool = True,
     ):
         self.ss = ss
         self.epi = epi
         self.cbf = cbf
+        self.hqp = hqp
+        
+        # If hqp is False, the tasks are weighted with 1 / (decay_factor**p)
+        # where p is the task "priority".
+        self.decay_factor = 5
+        
+        self.task = 'point'
+        self.x_min = -100
+        self.y_min = -100
+        self.x_max =  100
+        self.y_max =  100
         
         if ss:
             if epi:
@@ -57,8 +69,8 @@ class WholeBodyController:
         self._control_tasks.n_c = 1
         self._control_tasks.dt = 0.25
         
-        self._hqp = HierarchicalQP()
-        self._hqp.regularization = 1e-6
+        self._hqp = HierarchicalQP(hierarchical=self.hqp)
+        self._hqp.regularization = 1e-9
         
         self._solution = SolutionMS(robot_name)
         self._solution.control_tasks.n_c = self._control_tasks.n_c
@@ -73,6 +85,14 @@ class WholeBodyController:
         self._solution.control_tasks.n_c = n_c
         
     # ======================================================================= #
+    
+    def _solve_qp(self, A, b, C, d):
+        if self.hqp:
+            return self._hqp(A, b, C, d)
+        
+        we = [1/self.decay_factor**i for i in range(len(A))]
+        wi = we
+        return self._hqp(A, b, C, d, we, wi)
     
     def update(self, q, v, temp):
         self._control_tasks.update(q, v, temp)
@@ -100,17 +120,27 @@ class WholeBodyController:
         C.append(C_torque)
         d.append(d_torque)
         
-        C_temp, d_temp = self._control_tasks.task_temperature_limits()
-        A.append(None)
-        b.append(None)
-        C.append(C_temp)
-        d.append(d_temp)
+        # C_temp, d_temp = self._control_tasks.task_temperature_limits()
+        # A.append(None)
+        # b.append(None)
+        # C.append(C_temp)
+        # d.append(d_temp)
         
         C_vel_lim, d_vel_lim = self._control_tasks.task_velocity_limits()
         A.append(None)
         b.append(None)
         C.append(C_vel_lim)
         d.append(d_vel_lim)
+        
+        if self.task == 'obs8':
+            C_obs, d_obs = self._control_tasks.task_obs(
+                x_min=self.x_min, y_min=self.y_min,
+                x_max=self.x_max, y_max=self.y_max
+            )
+            A.append(None)
+            b.append(None)
+            C.append(C_obs)
+            d.append(d_obs)
         
         A_ref, b_ref = self._control_tasks.task_motion_ref(
             pos_ref, vel_ref, acc_ref
@@ -126,7 +156,7 @@ class WholeBodyController:
         C.append(None)
         d.append(None)
         
-        sol = self._hqp(A, b, C, d)
+        sol = self._solve_qp(A, b, C, d)
         
         self._solution.sol = sol
         
@@ -178,7 +208,7 @@ class WholeBodyController:
         # C.append(None)
         # d.append(None)
         
-        sol = self._hqp(A, b, C, d)
+        sol = self._solve_qp(A, b, C, d)
         
         self._solution.sol = sol
         
@@ -233,7 +263,7 @@ class WholeBodyController:
         C.append(None)
         d.append(None)
         
-        sol = self._hqp(A, b, C, d)
+        sol = self._solve_qp(A, b, C, d)
         
         self._solution.sol = sol
         

@@ -1,3 +1,4 @@
+import datetime
 import os
 
 from ament_index_python.packages import get_package_share_path
@@ -54,6 +55,7 @@ def generate_launch_description():
     ss = LaunchConfiguration('single_shooting', default='False')
     epi = LaunchConfiguration('epigraph', default='False')
     cbf = LaunchConfiguration('cbf', default='False')
+    hqp = LaunchConfiguration('hqp', default='True')
     task = LaunchConfiguration('task', default='point')
     use_rviz = LaunchConfiguration('use_rviz', default='False')
     
@@ -136,6 +138,7 @@ def generate_launch_description():
             {'single_shooting': ss},
             {'epigraph': epi},
             {'cbf': cbf},
+            {'hqp': hqp},
             {'nc': nc},
             {'dt': dt},
             {'kp': kp},
@@ -206,6 +209,7 @@ def generate_launch_description():
         DeclareLaunchArgument('single_shooting', default_value='False'),
         DeclareLaunchArgument('epigraph', default_value='False'),
         DeclareLaunchArgument('cbf', default_value='False'),
+        DeclareLaunchArgument('hqp', default_value='True'),
         DeclareLaunchArgument('task', default_value='point'),
         DeclareLaunchArgument('use_rviz', default_value='False'),
         DeclareLaunchArgument('use_yaml', default_value='False'),

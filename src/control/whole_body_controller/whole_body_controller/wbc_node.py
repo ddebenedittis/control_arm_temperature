@@ -4,7 +4,7 @@ import rclpy
 from rclpy.node import Node
 from rclpy.exceptions import InvalidParameterTypeException
 
-from geometry_msgs.msg import PointStamped, PoseStamped
+from geometry_msgs.msg import Point32, PointStamped, PolygonStamped, PoseStamped
 from nav_msgs.msg import Path
 from sensor_msgs.msg import JointState
 from std_msgs.msg import Float64MultiArray
@@ -25,7 +25,12 @@ class WBCController(Node):
         self.declare_parameter('cbf', False)
         self.cbf = self.get_parameter('cbf').get_parameter_value().bool_value
         
-        self.wbc = WholeBodyController('arm', ss=self.ss, epi=self.epi, cbf=self.cbf)
+        self.declare_parameter('hqp', True)
+        self.hqp = self.get_parameter('hqp').get_parameter_value().bool_value
+        
+        self.wbc = WholeBodyController(
+            'arm', ss=self.ss, epi=self.epi, cbf=self.cbf, hqp=self.hqp,
+        )
         
         self.k_p = 0.001
         self.k_d = 0.0001
@@ -34,6 +39,17 @@ class WBCController(Node):
         
         self.declare_parameter('task', 'point')
         self.task = self.get_parameter('task').get_parameter_value().string_value
+        self.wbc.task = self.task
+        if self.task == 'obs8':
+            self.x_min =  0.25
+            self.y_min = -0.45
+            self.x_max =  0.35
+            self.y_max = -0.35
+            
+            self.wbc.x_min = self.x_min
+            self.wbc.y_min = self.y_min
+            self.wbc.x_max = self.x_max
+            self.wbc.y_max = self.y_max
         
         self.declare_parameter('nc', 1)
         self.wbc.n_c = self.get_parameter('nc').get_parameter_value().integer_value
@@ -123,6 +139,15 @@ class WBCController(Node):
         self.ee_reference_path_pub = self.create_publisher(
             Path, '/ee_reference_path', 1)
         
+        self.feasible_region_1_pub = self.create_publisher(
+            PolygonStamped, '/feasible_region_1', 1)
+        self.feasible_region_2_pub = self.create_publisher(
+            PolygonStamped, '/feasible_region_2', 1)
+        self.feasible_region_3_pub = self.create_publisher(
+            PolygonStamped, '/feasible_region_3', 1)
+        self.feasible_region_4_pub = self.create_publisher(
+            PolygonStamped, '/feasible_region_4', 1)
+        
         # ============================== Timer ============================== #
         
         self.timer_period = 0.0025
@@ -184,6 +209,22 @@ class WBCController(Node):
                 0,
                 - radius * omega**2 * np.sin(omega * self.time)
             ])
+        elif self.task == 'obs8':   # Lemniscate trajectory
+            radius = 0.1
+            omega = 1
+
+            x = radius * np.sin(omega * self.time)
+            z = radius * np.sin(2 * omega * self.time)
+
+            dx = radius * omega * np.cos(omega * self.time)
+            dz = 2 * radius * omega * np.cos(2 * omega * self.time)
+
+            ddx = -radius * omega**2 * np.sin(omega * self.time)
+            ddz = -4 * radius * omega**2 * np.sin(2 * omega * self.time)
+
+            p_ref = np.array([0.30 + x, -0.16, -0.4 + z])
+            v_ref = np.array([dx, 0, dz])
+            a_ref = np.array([ddx, 0, ddz])
         else:
             raise ValueError(f"Unknown task: {self.task}")
             
@@ -239,6 +280,56 @@ class WBCController(Node):
             self.ee_reference_path_pub.publish(self.reference_path_msg)
             
             self.counter = self.counter % decimation
+            
+            # Publish the feasible region
+            if self.task == 'obs8':
+                if self.x_min is not None:
+                    polygon_msg_1 = PolygonStamped()
+                    polygon_msg_1.header.frame_id = 'base_link'
+                    polygon_msg_1.header.stamp = self.get_clock().now().to_msg()
+                    polygon_msg_1.polygon.points = [
+                        Point32(x=self.x_min,      y=-0.16, z= 100.0,),
+                        Point32(x=self.x_min-0.0001,  y=-0.16, z= 100.0,),
+                        Point32(x=self.x_min-0.0001,  y=-0.16, z=-100.0,),
+                        Point32(x=self.x_min,      y=-0.16, z=-100.0,)
+                    ]
+                    self.feasible_region_1_pub.publish(polygon_msg_1)
+                
+                if self.y_min is not None:
+                    polygon_msg_2 = PolygonStamped()
+                    polygon_msg_2.header.frame_id = 'base_link'
+                    polygon_msg_2.header.stamp = self.get_clock().now().to_msg()
+                    polygon_msg_2.polygon.points = [
+                        Point32(x=-100.0, y=-0.16, z=self.y_min,),
+                        Point32(x= 100.0, y=-0.16, z=self.y_min,),
+                        Point32(x= 100.0, y=-0.16, z=self.y_min-0.0001,),
+                        Point32(x=-100.0, y=-0.16, z=self.y_min-0.0001,)
+                    ]
+                    self.feasible_region_2_pub.publish(polygon_msg_2)
+                
+                if self.x_max is not None:
+                    polygon_msg_3 = PolygonStamped()
+                    polygon_msg_3.header.frame_id = 'base_link'
+                    polygon_msg_3.header.stamp = self.get_clock().now().to_msg()
+                    polygon_msg_3.polygon.points = [
+                        Point32(x=self.x_max,     y=-0.16, z= 100.0,),
+                        Point32(x=self.x_max+0.0001, y=-0.16, z= 100.0,),
+                        Point32(x=self.x_max+0.0001, y=-0.16, z=-100.0,),
+                        Point32(x=self.x_max,     y=-0.16, z=-100.0,)
+                    ]
+                    self.feasible_region_3_pub.publish(polygon_msg_3)
+                
+                if self.y_max is not None:
+                    polygon_msg_4 = PolygonStamped()
+                    polygon_msg_4.header.frame_id = 'base_link'
+                    polygon_msg_4.header.stamp = self.get_clock().now().to_msg()
+                    polygon_msg_4.polygon.points = [
+                        Point32(x=-100.0, y=-0.16, z=self.y_max,),
+                        Point32(x= 100.0, y=-0.16, z=self.y_max,),
+                        Point32(x= 100.0, y=-0.16, z=self.y_max+0.0001,),
+                        Point32(x=-100.0, y=-0.16, z=self.y_max+0.0001,)
+                    ]
+                    self.feasible_region_4_pub.publish(polygon_msg_4)
             
         decimation = 10
         if self.counter % decimation == 0:

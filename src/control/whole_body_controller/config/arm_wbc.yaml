@@ -2,7 +2,10 @@ whole_body_controller:
     ros__parameters:
         task: point
 
-        single_shooting: False
+        single_shooting: True
+        epigraph: True
+        cbf: False
+        hqp: True
 
         n_c: 1
 
