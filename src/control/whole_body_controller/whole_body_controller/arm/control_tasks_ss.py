@@ -218,6 +218,73 @@ class ControlTasksSS:
             d[i*self.n_q:(i+1)*self.n_q] = - self.b_state.Ti[i+1] + self.T_max
             
         return C, d
+    
+    def task_obs(
+        self,
+        x_min: float | None = None, y_min: float | None = None,
+        x_max: float | None = None, y_max: float | None = None,
+    ):
+        id_ee = self.robot_wrapper.model.getFrameId(self.robot_wrapper.ee_name)
+        
+        M = self.robot_wrapper.mass(self.q)
+        h = self.robot_wrapper.nle(self.q, self.v)
+        
+        J_ee = self.robot_wrapper.getFrameJacobian(id_ee, rf_frame=pin.LOCAL_WORLD_ALIGNED)
+        J_ee = J_ee[[0, 2], :]
+        
+        pos_ee = self.robot_wrapper.framePlacement(self.q, id_ee).translation
+        pos_ee = pos_ee[[0, 2]]
+        vel_ee = J_ee @ self.v
+        
+        J_ee_dot_times_v = pin.getFrameClassicalAcceleration(
+            self.robot_wrapper.model,
+            self.robot_wrapper.data,
+            id_ee,
+            pin.ReferenceFrame.LOCAL_WORLD_ALIGNED,
+        ).linear
+        J_ee_dot_times_v = J_ee_dot_times_v[[0, 2]]
+        
+        C = np.zeros((4*self.n_c, self.n_x_opt))
+        d = np.zeros(C.shape[0])
+        
+        C[0:2, self._id_ui(0)] = - 1/2 * self.dt**2 * J_ee @ pinv(M)
+        
+        d[0:2] = + 1/2 * self.dt**2 * J_ee_dot_times_v \
+            - 1/2 * self.dt**2 * J_ee @ pinv(M) @ h \
+            + pos_ee \
+            + vel_ee * self.dt \
+            - np.array([x_min, y_min])
+            
+        C[2:4, self._id_ui(0)] = 1/2 * self.dt**2 * J_ee @ pinv(M)
+        
+        d[2:4] = - 1/2 * self.dt**2 * J_ee_dot_times_v \
+            + 1/2 * self.dt**2 * J_ee @ pinv(M) @ h \
+            - pos_ee \
+            - vel_ee * self.dt \
+            + np.array([x_max, y_max])
+            
+        for i in range(2, self.n_c):
+            C[4*i:4*i+2, self._id_ui(i)] = - 1/2 * self.dt**2 * J_ee @ pinv(M)
+            # C[4*i:4*i+2, self._id_qi(i)] = self.k_p * J_ee
+            # C[4*i:4*i+2, self._id_vi(i)] = self.k_d * J_ee
+            
+            C[4*i+2:4*(i+1), self._id_ui(i)] = + 1/2 * self.dt**2 * J_ee @ pinv(M)
+            # C[4*i+2:4*(i+1), self._id_qi(i)] = self.k_p * J_ee
+            # C[4*i+2:4*(i+1), self._id_vi(i)] = self.k_d * J_ee
+            
+            d[4*i:4*i+2] = + 1/2 * self.dt**2 * J_ee_dot_times_v \
+                - 1/2 * self.dt**2 * J_ee @ pinv(M) @ h \
+                + pos_ee \
+                + vel_ee * self.dt \
+                - np.array([x_min, y_min])
+            
+            d[4*i+2:4*(i+1)] = - 1/2 * self.dt**2 * J_ee_dot_times_v \
+                + 1/2 * self.dt**2 * J_ee @ pinv(M) @ h \
+                - pos_ee \
+                - vel_ee * self.dt \
+                + np.array([x_max, y_max])
+            
+        return C, d
             
     def task_motion_ref(self, p_ref, v_ref, a_ref):
         # Only the first two components are controllable in a planar manipulator.

@@ -194,6 +194,16 @@ class WholeBodyController:
         C.append(C_vel_lim)
         d.append(d_vel_lim)
         
+        if self.task == 'obs8':
+            C_obs, d_obs = self._control_tasks.task_obs(
+                x_min=self.x_min, y_min=self.y_min,
+                x_max=self.x_max, y_max=self.y_max
+            )
+            A.append(None)
+            b.append(None)
+            C.append(C_obs)
+            d.append(d_obs)
+        
         A_ref, b_ref = self._control_tasks.task_motion_ref(
             pos_ref, vel_ref, acc_ref
         )
@@ -254,6 +264,16 @@ class WholeBodyController:
         b.append(None)
         C.append(C_vel_lim)
         d.append(d_vel_lim)
+        
+        if self.task == 'obs8':
+            C_obs, d_obs = self._control_tasks.task_obs(
+                x_min=self.x_min, y_min=self.y_min,
+                x_max=self.x_max, y_max=self.y_max
+            )
+            A.append(None)
+            b.append(None)
+            C.append(C_obs)
+            d.append(d_obs)
         
         A_ref, b_ref = self._control_tasks.task_motion_ref(
             pos_ref, vel_ref, acc_ref
