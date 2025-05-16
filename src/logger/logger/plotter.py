@@ -2,7 +2,30 @@ from cycler import cycler
 import os
 
 import numpy as np
+from matplotlib.cm import get_cmap, viridis
+from matplotlib.colors import Normalize
 import matplotlib.pyplot as plt
+
+
+def plot_colourline(x, y, c, vmin=25, vmax=40):
+    cmap = get_cmap('viridis').copy()
+    cmap.set_over('red')
+
+    norm = Normalize(vmin=vmin, vmax=vmax, clip=False)
+
+    col = cmap(norm(c))
+    ax = plt.gca()
+    for i in np.arange(len(x) - 1):
+        ax.plot([x[i], x[i+1]], [y[i], y[i+1]],
+                c=col[i], linestyle='-')
+
+    im = ax.scatter(x, y, c=c, s=0, cmap=cmap, norm=norm)
+
+    cbar = plt.colorbar(im, ax=ax, extend='max')
+    cbar.set_label(r"Max $T$ [°C]")
+    im.set_clim(vmin, vmax)
+
+    return im
 
 
 class Plot:
@@ -15,6 +38,11 @@ class Plot:
         self.subdir = subdir
         
         self.npzfile = np.load(f"{self.foldername}/csv/{self.subdir}/log.npz")
+        
+        self.ee_limits = {
+            'x': {'min': 100.0, 'max': -100.0},
+            'y': {'min': 100.0, 'max': -100.0},
+        }
         
     @staticmethod
     def process_y_axis_labels(name):
@@ -30,6 +58,52 @@ class Plot:
             return r"End-Effector Position [m]"
 
         return name
+    
+    def save_ee_traj(self):
+        ee_pos = self.npzfile['ee_position']
+        ee_ref = self.npzfile['reference_position']
+        temp = self.npzfile['temperatures']
+        
+        temp_max = np.max(temp, axis=1)
+        
+        fig = plt.figure(figsize=(self.x_size_def, self.y_size_def))
+        ax = plt.gca()
+        
+        im = plot_colourline(
+            ee_pos[:, 0],
+            ee_pos[:, 2],
+            temp_max,
+        )
+        
+        plt.plot(
+            ee_ref[:, 0], ee_ref[:, 2],
+            linestyle=':', color='blue', alpha=0.5,
+            # label=r'Reference Trajectory',
+        )
+        
+        ax.set(
+            xlabel=r'$x$-coordinate [m]',
+            ylabel=r'$z$-coordinate [m]',
+        )
+        
+        print(self.ee_limits['x']['max'])
+        
+        delta_x = self.ee_limits['x']['max'] - self.ee_limits['x']['min']
+        ax.set_xlim([
+            self.ee_limits['x']['min'] - delta_x * 0.05,
+            self.ee_limits['x']['max'] + delta_x * 0.05,
+        ])
+        delta_y = self.ee_limits['y']['max'] - self.ee_limits['y']['min']
+        ax.set_ylim([
+            self.ee_limits['y']['min'] - delta_y * 0.05,
+            self.ee_limits['y']['max'] + delta_y * 0.05,
+        ])
+        
+        plt.savefig(
+            os.path.join(self.foldername, 'pdf', self.subdir, "ee_traj.pdf"),
+            bbox_inches='tight',
+        )
+        plt.close()
         
     def save_all_plots(self):
         times = self.npzfile['times']
@@ -96,6 +170,24 @@ def main():
             os.makedirs(os.path.join(rootdir_plt, file), exist_ok=True)
             if len(os.listdir(os.path.join(rootdir_plt, file))) == 0:
                 n_to_process += 1
+                
+    # Get x and y min and max values across all folders
+    counter = 0
+    ee_limits = {
+        'x': {'min': 100.0, 'max': -100.0},
+        'y': {'min': 100.0, 'max': -100.0},
+    }
+    for file in os.listdir(rootdir_csv):
+        d = os.path.join(rootdir_csv, file)
+        if os.path.isdir(d) \
+            and len(os.listdir(os.path.join(rootdir_plt, file))) == 0:
+        
+            foldername = 'log'
+            npzfile = np.load(f"{foldername}/csv/{file}/log.npz")
+            ee_limits['x']['min'] = min(ee_limits['x']['min'], np.min(npzfile['ee_position'][:, 0]))
+            ee_limits['x']['max'] = max(ee_limits['x']['max'], np.max(npzfile['ee_position'][:, 0]))
+            ee_limits['y']['min'] = min(ee_limits['y']['min'], np.min(npzfile['ee_position'][:, 2]))
+            ee_limits['y']['max'] = max(ee_limits['y']['max'], np.max(npzfile['ee_position'][:, 2]))
 
     # Process each folder
     counter = 0
@@ -108,7 +200,10 @@ def main():
             print(f"Processing the {counter}-th folder out of {n_to_process} total folders ({file})...")
 
             plot = Plot(file)
+            plot.ee_limits = ee_limits
+            
             plot.save_all_plots()
+            plot.save_ee_traj()
 
     print("\nFinished.\n")
     
