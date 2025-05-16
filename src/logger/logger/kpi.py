@@ -29,6 +29,20 @@ class KPI:
         
         return rmse, max_error
     
+    def compute_kpi_barrier(self):
+        x_max =  0.375
+        y_min = -0.425
+        
+        ee_position = self.npzfile['ee_position']
+        
+        x = ee_position[:, 0] - x_max
+        x = np.clip(x, a_min=0, a_max=None)
+        
+        y = ee_position[:, 1] - y_min
+        y = np.clip(y, a_min=None, a_max=0)
+        
+        return np.sum(x**2 + y**2)
+    
     def compute_temp_max_and_mean(self):
         temp = self.npzfile['temperatures']
         temp_max = np.max(temp, axis=0)
@@ -43,6 +57,9 @@ class KPI:
         temp_max, temp_mean = self.compute_temp_max_and_mean()
         print(f"Max temperatures: {temp_max}")
         print(f"Mean temperatures: {temp_mean}")
+        
+        # kpi_barrier = self.compute_kpi_barrier()
+        # print(f"Barrier KPI: {kpi_barrier}")
     
     
 def main():
