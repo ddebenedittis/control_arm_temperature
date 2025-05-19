@@ -5,6 +5,9 @@ import numpy as np
 from matplotlib.cm import get_cmap, viridis
 from matplotlib.colors import Normalize
 import matplotlib.pyplot as plt
+import pinocchio as pin
+
+from robot_model.robot_wrapper import RobotWrapper
 
 
 def plot_colourline(x, y, c, vmin=25, vmax=40):
@@ -44,6 +47,9 @@ class Plot:
             'y': {'min': 100.0, 'max': -100.0},
         }
         
+        self.robot_name = 'arm'
+        self.robot_wrapper = RobotWrapper(self.robot_name)
+        
     @staticmethod
     def process_y_axis_labels(name):
         if name == "joint_positions":
@@ -58,6 +64,28 @@ class Plot:
             return r"End-Effector Position [m]"
 
         return name
+    
+    def compute_task_space_vel(self, q: np.ndarray, q_dot: np.ndarray):
+        self.robot_wrapper.forwardKinematics(q)
+        pin.computeJointJacobians(self.robot_wrapper.model, self.robot_wrapper.data)
+        pin.updateFramePlacements(self.robot_wrapper.model, self.robot_wrapper.data)
+        
+        id_ee = self.robot_wrapper.model.getFrameId(self.robot_wrapper.ee_name)
+        J_ee = self.robot_wrapper.getFrameJacobian(id_ee, rf_frame=pin.LOCAL_WORLD_ALIGNED)
+        J_ee = J_ee[[0, 2], :]
+        
+        return (np.linalg.pinv(J_ee) @ J_ee) @ q_dot
+        
+    def compute_nullspace_vel(self, q: np.ndarray, q_dot: np.ndarray):
+        self.robot_wrapper.forwardKinematics(q)
+        pin.computeJointJacobians(self.robot_wrapper.model, self.robot_wrapper.data)
+        pin.updateFramePlacements(self.robot_wrapper.model, self.robot_wrapper.data)
+        
+        id_ee = self.robot_wrapper.model.getFrameId(self.robot_wrapper.ee_name)
+        J_ee = self.robot_wrapper.getFrameJacobian(id_ee, rf_frame=pin.LOCAL_WORLD_ALIGNED)
+        J_ee = J_ee[[0, 2], :]
+        
+        return (np.eye(3) - np.linalg.pinv(J_ee) @ J_ee) @ q_dot
     
     def save_ee_traj(self):
         ee_pos = self.npzfile['ee_position']
@@ -86,8 +114,6 @@ class Plot:
             ylabel=r'$z$-coordinate [m]',
         )
         
-        print(self.ee_limits['x']['max'])
-        
         delta_x = self.ee_limits['x']['max'] - self.ee_limits['x']['min']
         ax.set_xlim([
             self.ee_limits['x']['min'] - delta_x * 0.05,
@@ -101,6 +127,49 @@ class Plot:
         
         plt.savefig(
             os.path.join(self.foldername, 'pdf', self.subdir, "ee_traj.pdf"),
+            bbox_inches='tight',
+        )
+        plt.close()
+        
+    def save_nullspace_vel(self):
+        times = self.npzfile['times']
+        q = self.npzfile['joint_positions']
+        q_dot = self.npzfile['joint_velocities']
+        
+        nullspace_vel = np.array([
+            self.compute_nullspace_vel(q[i], q_dot[i])
+            for i in range(len(q))
+        ])
+        
+        task_space_vel = np.array([
+            self.compute_task_space_vel(q[i], q_dot[i])
+            for i in range(len(q))
+        ])
+        
+        fig, axs = plt.subplots(2, 1, figsize=(self.x_size_def, self.y_size_def), sharex=True)
+        
+        axs[0].plot(times, nullspace_vel)
+        axs[0].set_ylabel(r"Nullspace Vel. [rad/s]")
+        axs[0].legend([
+            r'$\dot{q}_{\tiny N, 1}$',
+            r'$\dot{q}_{\tiny N, 2}$',
+            r'$\dot{q}_{\tiny N, 3}$',
+        ])
+
+        axs[1].plot(times, task_space_vel)
+        axs[1].set_xlabel('Time [s]')
+        axs[1].set_ylabel(r"Task Space Vel. [rad/s]")
+        axs[1].legend([
+            r'$\dot{q}_{\tiny T, 1}$',
+            r'$\dot{q}_{\tiny T, 2}$',
+            r'$\dot{q}_{\tiny T, 3}$',
+        ])
+        
+        axs[0].set_xlim([times[0], times[-1]])
+        axs[1].set_xlim([times[0], times[-1]])
+        
+        plt.savefig(
+            os.path.join(self.foldername, 'pdf', self.subdir, "nullspace_vel.pdf"),
             bbox_inches='tight',
         )
         plt.close()
@@ -204,6 +273,7 @@ def main():
             
             plot.save_all_plots()
             plot.save_ee_traj()
+            plot.save_nullspace_vel()
 
     print("\nFinished.\n")
     
