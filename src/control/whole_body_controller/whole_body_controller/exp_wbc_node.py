@@ -362,9 +362,9 @@ class WBCController(Node):
         msg = JointsCommand()
         msg.header.stamp = self.get_clock().now().to_msg()
         msg.name = self.wbc._control_tasks.robot_wrapper.joint_names
-        msg.position = q
-        msg.velocity = v
-        msg.effort = tau
+        msg.position = q.tolist()
+        msg.velocity = v.tolist()
+        msg.effort = tau.tolist()
         msg.kp_scale = [0.1, 0.1, 0.1]
         msg.kd_scale = [1.0, 1.0, 1.0]
         self.joint_command_pub.publish(msg)
@@ -373,8 +373,8 @@ class WBCController(Node):
         joint_state_msg = JointState()
         joint_state_msg.header.stamp = self.get_clock().now().to_msg()
         joint_state_msg.name = self.wbc._control_tasks.robot_wrapper.joint_names
-        joint_state_msg.position = self.joint_positions
-        joint_state_msg.velocity = self.joint_velocities
+        joint_state_msg.position = self.joint_positions.tolist()
+        joint_state_msg.velocity = self.joint_velocities.tolist()
         
         self.joint_state_pub.publish(joint_state_msg)
         

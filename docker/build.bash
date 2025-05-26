@@ -6,7 +6,7 @@ cd "$(dirname "$(dirname "$(realpath "${BASH_SOURCE[0]}")")")"
 # ================================= Edit Here ================================ #
 
 BASE_IMAGE=osrf/ros
-BASE_TAG=jazzy-desktop
+BASE_TAG=humble-desktop
 ROS_NUMBER=2
 IMAGE_NAME=control_arm_temperature
 

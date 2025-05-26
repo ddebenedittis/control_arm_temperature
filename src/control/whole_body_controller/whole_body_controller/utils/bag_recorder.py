@@ -25,7 +25,7 @@ class BagRecorder(Node):
         self.recorder = Recorder()
         
         self.record_options = RecordOptions()
-        self.record_options.all_topics = True
+        self.record_options.all = True
         
         self.storage_options: rosbag2_py.StorageOptions = rosbag2_py._storage.StorageOptions(
             uri=bag_filepath, storage_id='mcap')

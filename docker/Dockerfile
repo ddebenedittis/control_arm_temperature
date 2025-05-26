@@ -55,14 +55,12 @@ RUN --mount=type=cache,sharing=locked,target=/var/cache/apt --mount=type=cache,s
     build-essential \
     git \
     python3-pip \
-    ros-$ROS_DISTRO-gz-ros2-control \
     ros-$ROS_DISTRO-joint-state-publisher \
     ros-$ROS_DISTRO-joint-state-publisher-gui \
-    ros-$ROS_DISTRO-plotjuggler-ros \
-    ros-$ROS_DISTRO-ros-gz \
-    ros-$ROS_DISTRO-ros-gz-bridge \
+    ros-$ROS_DISTRO-plotjuggler \
     ros-$ROS_DISTRO-ros2-control \
     ros-$ROS_DISTRO-ros2-controllers \
+    ros-$ROS_DISTRO-rosbag2-storage-mcap \
     ros-$ROS_DISTRO-rviz2 \
     ros-$ROS_DISTRO-slider-publisher \
     ros-$ROS_DISTRO-xacro \
@@ -77,7 +75,7 @@ matplotlib \
 pin \
 qpsolvers \
 quadprog \
---break-system-packages --ignore-installed --upgrade
+--ignore-installed --upgrade
 
 # Install packages specific for ROS 1.
 RUN --mount=type=cache,sharing=locked,target=/var/cache/apt --mount=type=cache,sharing=locked,target=/var/lib/apt \

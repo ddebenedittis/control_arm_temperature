@@ -5,4 +5,4 @@
 [submodule "src/rviz_legged"]
 	path = src/rviz_legged
 	url = git@github.com:ddebenedittis/rviz_legged.git
-	branch = jazzy
+	branch = humble
