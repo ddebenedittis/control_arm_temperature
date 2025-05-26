@@ -102,8 +102,7 @@ ARG DOCS=0
             pip3 install \
                 sphynx \
                 sphinx-autobuild \
-                sphinx-book-theme \
-                --break-system-packages ; \
+                sphinx-book-theme ; \
         fi
 
 ARG MYUID=1000
