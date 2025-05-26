@@ -62,9 +62,9 @@ def generate_launch_description():
     use_yaml = LaunchConfiguration('use_yaml', default='False')
     nc = LaunchConfiguration('nc', default='1')
     dt = LaunchConfiguration('dt', default='0.25')
-    kp = LaunchConfiguration('kp', default='10.0')
-    kd = LaunchConfiguration('kd', default='10.0')
-    ki = LaunchConfiguration('ki', default='1.0')
+    kp = LaunchConfiguration('kp', default='1000.0')
+    kd = LaunchConfiguration('kd', default='500.0')
+    ki = LaunchConfiguration('ki', default='0.0')
 
     # ======================================================================= #
 
@@ -215,9 +215,9 @@ def generate_launch_description():
         DeclareLaunchArgument('use_yaml', default_value='False'),
         DeclareLaunchArgument('nc', default_value='1'),
         DeclareLaunchArgument('dt', default_value='0.25'),
-        DeclareLaunchArgument('kp', default_value='10.0'),
-        DeclareLaunchArgument('kd', default_value='10.0'),
-        DeclareLaunchArgument('ki', default_value='1.0'),
+        DeclareLaunchArgument('kp', default_value='1000.0'),
+        DeclareLaunchArgument('kd', default_value='500.0'),
+        DeclareLaunchArgument('ki', default_value='0.0'),
         gz,
         gz_ros_bridge,
         change_camera,

@@ -33,7 +33,7 @@ class WBCController(Node):
         
         self.k_p = np.array([1.0, 0.5, 0.1]) * 0.0
         self.k_d = np.array([1.0, 0.5, 0.1]) * 0.2
-        self.k_tau = np.array([1.0, 1.0, 1.0]) * 0.0
+        self.k_tau = np.array([1.0, 1.0, 1.0]) * 0.1
         
         # ============================ Parameters =========================== #
         
@@ -221,7 +221,7 @@ class WBCController(Node):
         msg.velocity = v
         msg.effort = tau
         msg.kp_scale = [0.1, 0.1, 0.1]
-        msg.kd_scale = [0.1, 0.1, 0.1]
+        msg.kd_scale = [1.0, 1.0, 1.0]
         self.joint_command_pub.publish(msg)
             
         self.counter += 1
