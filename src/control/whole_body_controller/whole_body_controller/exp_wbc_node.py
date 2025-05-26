@@ -190,8 +190,10 @@ class WBCController(Node):
                 joint_velocities[idx] = msg.velocity[i]
             else:
                 joint_velocities[idx] = self.joint_velocities[idx]
-            if not np.isnan(msg.temperature[i]):
-                self.temp[idx] = msg.temperature[i]
+            #! The interface is bugged. The curent is actually the temperature
+            #! and vice versa.
+            if not np.isnan(msg.current[i]):
+                self.temp[idx] = msg.current[i]
                 
         self.joint_positions = self.joint_positions_filter.filter(joint_positions)
         self.joint_velocities = self.joint_velocities_filter.filter(joint_velocities)
