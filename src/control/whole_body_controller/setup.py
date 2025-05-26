@@ -48,7 +48,9 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
+            'exp_wbc_node = whole_body_controller.exp_wbc_node:main',
             'positins2torque = whole_body_controller.utils.pos2torque_leg_publisher:main',
+            'republish_command = whole_body_controller.utils.republish_command:main',
             'wbc_node = whole_body_controller.wbc_node:main',
             'wbc_leg_node = whole_body_controller.wbc_leg_node:main',
             'temperature_node = whole_body_controller.utils.temperature_node:main',
