@@ -5,7 +5,7 @@
         "context": "..",
         "args": {
             "BASE_IMAGE": "osrf/ros",
-            "BASE_TAG": "jazzy-desktop",
+            "BASE_TAG": "humble-desktop",
             "ROS_NUMBER": "2",
             "MYUID": "1000",
             "MYGID": "1000",
