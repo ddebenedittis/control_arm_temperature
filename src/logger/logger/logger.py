@@ -68,18 +68,22 @@ class Logger(Node):
         self.joint_positions = np.zeros(3)
         self.joint_velocities = np.zeros(3)
         self.joint_torques = np.zeros(3)
+        self.joint_currents = np.zeros(3)
         self.temperatures = np.zeros(3)
         
         self.ee_position = np.zeros(3)
         self.reference_position = np.zeros(3)
         
         self.k = 0
-        timesteps = 600
+        timesteps = 3000
+        
+        self.time_0 = None
         
         self.times_vec = np.zeros(timesteps)
         self.joint_positions_vec = np.zeros((timesteps, 3))
         self.joint_velocities_vec = np.zeros((timesteps, 3))
         self.joint_torques_vec = np.zeros((timesteps, 3))
+        self.joint_currents_vec = np.zeros((timesteps, 3))
         self.temperatures_vec = np.zeros((timesteps, 3))
         
         self.ee_position_vec = np.zeros((timesteps, 3))
@@ -104,6 +108,8 @@ class Logger(Node):
             #! and vice versa.
             if not np.isnan(msg.current[i]):
                 self.temperatures[idx] = msg.current[i]
+            if not np.isnan(msg.temperature[i]):
+                self.joint_currents[idx] = msg.temperature[i]
                 
     def command_callback(self, msg: JointsCommand):
         pass
@@ -120,11 +126,15 @@ class Logger(Node):
     def timer_callback(self):
         if self.joint_positions is None:
             return
+        
+        if self.time_0 is None:
+            self.time_0 = self.get_clock().now().nanoseconds / 1e9
             
-        self.times_vec[self.k] = self.get_clock().now().nanoseconds / 1e9
+        self.times_vec[self.k] = self.get_clock().now().nanoseconds / 1e9 - self.time_0
         self.joint_positions_vec[self.k, :] = self.joint_positions
         self.joint_velocities_vec[self.k, :] = self.joint_velocities
         # self.joint_torques_vec[self.k, :] = self.joint_torques
+        self.joint_currents_vec[self.k, :] = self.joint_currents
         self.temperatures_vec[self.k, :] = self.temperatures
         
         self.ee_position_vec[self.k, :] = self.ee_position
@@ -153,6 +163,7 @@ class Logger(Node):
             joint_positions=self.joint_positions_vec,
             joint_velocities=self.joint_velocities_vec,
             joint_torques=self.joint_torques_vec,
+            joint_currents=self.joint_currents_vec,
             temperatures=self.temperatures_vec,
             ee_position=self.ee_position_vec,
             reference_position=self.reference_position_vec,

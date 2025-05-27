@@ -60,6 +60,8 @@ class Plot:
             return r"Torques [Nm]"
         if name == "temperatures":
             return r"Temperatures [°C]"
+        if name == "joint_currents":
+            return r"Motor Currents [A]"
         if name == "ee_position":
             return r"End-Effector Position [m]"
 
