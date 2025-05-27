@@ -24,14 +24,14 @@
             <param name="bus">3</param>
             <param name="motor_transmission">9.0</param>
             <param name="sec_enc_transmission">3.23</param>
-            <param name="KP">10.0</param> 
-            <param name="KD">0.08</param> 
+            <param name="KP">20.0</param> 
+            <param name="KD">1.0</param> 
             <param name="KI">0.0</param> 
             <param name="i_limit">0.0</param>
             <param name="p_lim_max">3.14</param> 
             <param name="p_lim_min">-3.14</param>
             <param name="p_offset">0.0</param>
-            <param name="max_vel">10.0</param>
+            <param name="max_vel">3.0</param>
             <param name="max_torque">5.0</param>
         </joint>
 
@@ -40,14 +40,14 @@
             <param name="bus">1</param>
             <param name="motor_transmission">9.0</param>  
             <param name="sec_enc_transmission">3.23</param>  
-            <param name="KP">10.0</param> 
-            <param name="KD">0.08</param> 
+            <param name="KP">20.0</param> 
+            <param name="KD">1.0</param> 
             <param name="KI">0.0</param> 
             <param name="i_limit">0.0</param>
             <param name="p_lim_max">3.14</param> 
             <param name="p_lim_min">-3.14</param>
             <param name="p_offset">0.0</param>
-            <param name="max_vel">10.0</param>
+            <param name="max_vel">3.0</param>
             <param name="max_torque">5.0</param>
         </joint>
 
@@ -57,13 +57,13 @@
             <param name="motor_transmission">9.0</param>  
             <param name="sec_enc_transmission">3.23</param>  
             <param name="KP">10.0</param> 
-            <param name="KD">0.08</param> 
+            <param name="KD">1.0</param> 
             <param name="KI">0.0</param> 
             <param name="i_limit">0.0</param>
             <param name="p_lim_max">3.14</param> 
             <param name="p_lim_min">-3.14</param>
             <param name="p_offset">0.0</param>
-            <param name="max_vel">10.0</param>
+            <param name="max_vel">3.0</param>
             <param name="max_torque">5.0</param>
         </joint>
     </ros2_control>
