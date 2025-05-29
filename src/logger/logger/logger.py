@@ -65,29 +65,31 @@ class Logger(Node):
         
         self.joint_names = ['JOINT_1', 'JOINT_2', 'JOINT_3']
         
-        self.joint_positions = np.zeros(3)
-        self.joint_velocities = np.zeros(3)
-        self.joint_torques = np.zeros(3)
-        self.joint_currents = np.zeros(3)
-        self.temperatures = np.zeros(3)
+        self.joint_positions = np.zeros(3) * np.nan
+        self.joint_velocities = np.zeros(3) * np.nan
+        self.joint_torques = np.zeros(3) * np.nan
+        self.joint_currents = np.zeros(3) * np.nan
+        self.temperatures = np.zeros(3) * np.nan
         
-        self.ee_position = np.zeros(3)
-        self.reference_position = np.zeros(3)
+        self.ee_position = np.zeros(3) * np.nan
+        self.reference_position = np.zeros(3) * np.nan
         
         self.k = 0
-        timesteps = 3000
+        self.timesteps = 3000
         
         self.time_0 = None
         
-        self.times_vec = np.zeros(timesteps)
-        self.joint_positions_vec = np.zeros((timesteps, 3))
-        self.joint_velocities_vec = np.zeros((timesteps, 3))
-        self.joint_torques_vec = np.zeros((timesteps, 3))
-        self.joint_currents_vec = np.zeros((timesteps, 3))
-        self.temperatures_vec = np.zeros((timesteps, 3))
+        self.times_vec = np.zeros(self.timesteps) * np.nan
+        self.joint_positions_vec = np.zeros((self.timesteps, 3)) * np.nan
+        self.joint_velocities_vec = np.zeros((self.timesteps, 3)) * np.nan
+        self.joint_torques_vec = np.zeros((self.timesteps, 3)) * np.nan
+        self.joint_currents_vec = np.zeros((self.timesteps, 3)) * np.nan
+        self.temperatures_vec = np.zeros((self.timesteps, 3)) * np.nan
         
-        self.ee_position_vec = np.zeros((timesteps, 3))
-        self.reference_position_vec = np.zeros((timesteps, 3))
+        self.ee_position_vec = np.zeros((self.timesteps, 3)) * np.nan
+        self.reference_position_vec = np.zeros((self.timesteps, 3)) * np.nan
+        
+        self.get_logger().info("Logger node has been started.")
         
     def joint_states_callback(self, msg: JointState):
         self.joint_positions = np.array(msg.position)
@@ -124,8 +126,11 @@ class Logger(Node):
         self.reference_position = np.array([msg.point.x, msg.point.y, msg.point.z])
         
     def timer_callback(self):
-        if self.joint_positions is None:
+        if np.any(np.isnan(self.joint_positions)):
             return
+        
+        if self.k % 100 == 0:
+            self.get_logger().info(f"{self.k/10} seconds out of {self.timesteps/10} seconds have been logged.")
         
         if self.time_0 is None:
             self.time_0 = self.get_clock().now().nanoseconds / 1e9
