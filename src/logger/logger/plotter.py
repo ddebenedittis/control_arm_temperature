@@ -10,7 +10,7 @@ import pinocchio as pin
 from robot_model.robot_wrapper import RobotWrapper
 
 
-def plot_colourline(x, y, c, vmin=25, vmax=40):
+def plot_colourline(x, y, c, vmin=25, vmax=35.1):
     cmap = get_cmap('viridis').copy()
     cmap.set_over('red')
 
@@ -49,6 +49,19 @@ class Plot:
         
         self.robot_name = 'arm'
         self.robot_wrapper = RobotWrapper(self.robot_name)
+        
+        self.t_max = 300
+        mask = self.npzfile['times'] <= self.t_max
+
+        self.npzfile = {
+            key: self.npzfile[key][mask]
+            for key in self.npzfile.files
+        }
+        for key in self.npzfile.keys():
+            self.npzfile[key] = np.where(
+                self.npzfile[key] == 0, np.nan, self.npzfile[key]
+            )
+        
         
     @staticmethod
     def process_y_axis_labels(name):
@@ -167,8 +180,8 @@ class Plot:
             r'$\dot{q}_{\tiny T, 3}$',
         ])
         
-        axs[0].set_xlim([times[0], times[-1]])
-        axs[1].set_xlim([times[0], times[-1]])
+        axs[0].set_xlim([0, 300])
+        axs[1].set_xlim([0, 300])
         
         plt.savefig(
             os.path.join(self.foldername, 'pdf', self.subdir, "nullspace_vel.pdf"),
@@ -179,7 +192,7 @@ class Plot:
     def save_all_plots(self):
         times = self.npzfile['times']
         
-        for name in sorted(self.npzfile.files):
+        for name in sorted(self.npzfile.keys()):
             if name == 'times' or name == 'reference_position':
                 continue
             
@@ -190,7 +203,7 @@ class Plot:
             
             plt.xlabel('Time [s]')
             plt.ylabel(self.process_y_axis_labels(name))
-            plt.xlim([times[0], times[-1]])
+            plt.xlim([0, self.t_max])
             
             if name == 'ee_position':
                 arr2 = self.npzfile['reference_position']
@@ -275,7 +288,7 @@ def main():
             
             plot.save_all_plots()
             plot.save_ee_traj()
-            plot.save_nullspace_vel()
+            # plot.save_nullspace_vel()
 
     print("\nFinished.\n")
     
