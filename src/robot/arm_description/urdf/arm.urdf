@@ -41,7 +41,7 @@
       <material name="white"/>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="file:///home/davide/Dropbox/phd/quadrupeds/control_arm_temperature/install/arm_description/share/arm_description/meshes//Module_right_front.stl"/>
+        <mesh filename="package://arm_description/meshes/Module_right_front.stl"/>
       </geometry>
     </visual>
     <collision>
@@ -92,7 +92,7 @@
       <material name="white"/>
       <origin rpy="0 1.570796 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="file:///home/davide/Dropbox/phd/quadrupeds/control_arm_temperature/install/arm_description/share/arm_description/meshes//Module_right_front.stl"/>
+        <mesh filename="package://arm_description/meshes/Module_right_front.stl"/>
       </geometry>
     </visual>
     <collision>
@@ -143,7 +143,7 @@
       <material name="white"/>
       <origin rpy="0 1.570796 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="file:///home/davide/Dropbox/phd/quadrupeds/control_arm_temperature/install/arm_description/share/arm_description/meshes//Module_right_front.stl"/>
+        <mesh filename="package://arm_description/meshes/Module_right_front.stl"/>
       </geometry>
     </visual>
     <collision>
@@ -195,13 +195,13 @@
       <material name="white"/>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="file:///home/davide/Dropbox/phd/quadrupeds/control_arm_temperature/install/arm_description/share/arm_description/meshes//Lower_leg_right.stl"/>
+        <mesh filename="package://arm_description/meshes/Lower_leg_right.stl"/>
       </geometry>
     </visual>
     <collision name="MODULE_EE">
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="file:///home/davide/Dropbox/phd/quadrupeds/control_arm_temperature/install/arm_description/share/arm_description/meshes//Lower_leg_right.stl"/>
+        <mesh filename="package://arm_description/meshes/Lower_leg_right.stl"/>
       </geometry>
     </collision>
     <inertial>
