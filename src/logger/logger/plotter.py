@@ -225,8 +225,8 @@ def main():
         cycler('linestyle', ['-', '--', '-', '--'])
     )
 
-    textsize = 16
-    labelsize = 18
+    textsize = 20
+    labelsize = 22
 
     plt.rc('font', family='serif', serif='Times')
     plt.rc('text', usetex=True)
@@ -239,6 +239,30 @@ def main():
     plt.rc("grid", linestyle='dotted', linewidth=0.25)
 
     plt.rcParams['figure.constrained_layout.use'] = True
+    
+    plt.rcParams.update({
+        # Outer padding when saving
+        "savefig.bbox": "tight",
+        "savefig.pad_inches": 0.02,   # default is 0.1
+
+        # Constrained layout padding
+        "figure.constrained_layout.h_pad": 0.02,
+        "figure.constrained_layout.w_pad": 0.02,
+        "figure.constrained_layout.hspace": 0.02,
+        "figure.constrained_layout.wspace": 0.02,
+
+        # Distance between axis and labels
+        "axes.labelpad": 2.0,         # default ~4
+
+        # Distance between ticks and their labels
+        "xtick.major.pad": 2.0,       # default ~3.5
+        "ytick.major.pad": 2.0,
+
+        # Legend padding
+        "legend.borderaxespad": 0.2,  # distance from axes
+        "legend.borderpad": 0.2,      # inside the legend box
+        "legend.labelspacing": 0.2,   # vertical space between entries
+    })
     
     plots_format = 'pdf'
     
