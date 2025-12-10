@@ -50,23 +50,25 @@ class FadingFilter:
             # First-order fading filter
             if self.x.size == 0:
                 # Initialize the filter with the current measurement
-                self.x = meas
+                self.x = np.nan_to_num(meas, nan=0.0)
             else:
                 beta = self._beta
-                self.x = beta * self.x + (1 - beta) * meas
+                self.x = beta * self.x + (1 - beta) * np.where(np.isnan(meas), self.x, meas)
 
         elif self._order == 2:
             # Second-order fading filter
             if self.x_dot.size == 0:
                 # Initialize the filter with the current measurement
-                self.x = meas
+                self.x = np.nan_to_num(meas, nan=0.0)
                 self.x_dot = np.zeros(meas.shape)
             else:
                 beta = self._beta
                 G = 1 - beta**2
                 H = (1 - beta)**2
+                
+                meas_not_nan = np.where(np.isnan(meas), self.x + self.x_dot * Ts, meas)
 
-                self.x = self.x + self.x_dot * Ts + G * (meas - (self.x + self.x_dot * Ts))
-                self.x_dot = self.x_dot + H / Ts * (meas - (self.x + self.x_dot * Ts))
+                self.x = self.x + self.x_dot * Ts + G * (meas_not_nan - (self.x + self.x_dot * Ts))
+                self.x_dot = self.x_dot + H / Ts * (meas_not_nan - (self.x + self.x_dot * Ts))
 
         return self.x
