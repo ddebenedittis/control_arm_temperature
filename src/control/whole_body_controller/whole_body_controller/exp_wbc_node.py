@@ -13,6 +13,10 @@ from whole_body_controller.arm.whole_body_controller import WholeBodyController
 from whole_body_controller.utils.fading_filter import FadingFilter
 
 
+def smooth_activation(temp, edge0=34.80, edge1=34.95):
+    t = np.clip((temp - edge0) / (edge1 - edge0), 0, 1)
+    return 1 - (t * t * (3 - 2 * t))
+
 class WBCController(Node):
     def __init__(self):
         super().__init__('wbc_node')
@@ -33,9 +37,9 @@ class WBCController(Node):
             'arm', ss=self.ss, epi=self.epi, cbf=self.cbf, hqp=self.hqp,
         )
         
-        self.k_p = np.array([1.0, 0.5, 0.1]) * 0.0
-        self.k_d = np.array([1.0, 0.5, 0.1]) * 0.2
-        self.k_tau = np.array([1.0, 1.0, 1.0]) * 0.1
+        self.k_p = np.array([1.0, 1.0, 1.0])
+        self.k_d = np.array([1.0, 1.0, 1.0])
+        self.k_tau = np.array([1.0, 1.0, 1.0]) * 0.5
         
         # ============================ Parameters =========================== #
         
@@ -168,11 +172,14 @@ class WBCController(Node):
         self.joint_positions = np.zeros(self.wbc._control_tasks.robot_wrapper.nq)
         self.joint_velocities = np.zeros(self.wbc._control_tasks.robot_wrapper.nv)
         self.temp = np.ones(self.wbc._control_tasks.robot_wrapper.nq) * 25
+        self.temp_low_passed = np.ones(self.wbc._control_tasks.robot_wrapper.nq) * 25
         
         self.joint_positions_filter = FadingFilter()
         self.joint_positions_filter.beta = 0.75
         self.joint_velocities_filter = FadingFilter()
         self.joint_velocities_filter.beta = 0.75
+        self.temp_filter = FadingFilter()
+        self.temp_filter.beta = 0.95
         
     def joint_states_callback(self, msg: JointsStates):
         joint_positions = np.zeros(self.joint_positions.shape)
@@ -190,20 +197,23 @@ class WBCController(Node):
                 joint_velocities[idx] = msg.velocity[i]
             else:
                 joint_velocities[idx] = self.joint_velocities[idx]
-            if not np.isnan(msg.temperature[i]):
-                self.temp[idx] = msg.temperature[i]
+            #! The interface is bugged. The curent is actually the temperature
+            #! and vice versa.
+            if not np.isnan(msg.current[i]):
+                self.temp[idx] = msg.current[i]
                 
         self.joint_positions = self.joint_positions_filter.filter(joint_positions)
         self.joint_velocities = self.joint_velocities_filter.filter(joint_velocities)
+        self.temp_low_passed = self.temp_filter.filter(self.temp)
         
     def get_ref(self):
         if self.task == 'point':
-            p_ref = np.array([0.30, -0.16, -0.4])
+            p_ref = np.array([0.55, -0.16, -0.3])
             v_ref = np.zeros(3)
             a_ref = np.zeros(3)
         elif self.task == 'circle':
-            radius = 0.1
-            omega = 1
+            radius = 0.10
+            omega = 2.0
             
             p_ref = np.array([
                 0.30 + radius * np.cos(omega * self.time),
@@ -353,26 +363,31 @@ class WBCController(Node):
             p_ref, v_ref, a_ref
         )
         
-        q = sol.q
-        v = sol.v
+        q = self.joint_positions + 1/10 * (sol.v - self.joint_velocities)
+        v = sol.v * 0
         tau = sol.tau * self.k_tau
+        
+        activation = smooth_activation(self.temp_low_passed)
+        # activation = 1.0
         
         msg = JointsCommand()
         msg.header.stamp = self.get_clock().now().to_msg()
         msg.name = self.wbc._control_tasks.robot_wrapper.joint_names
-        msg.position = q
-        msg.velocity = v
-        msg.effort = tau
-        msg.kp_scale = [0.1, 0.1, 0.1]
-        msg.kd_scale = [1.0, 1.0, 1.0]
+        msg.position = (q*activation + self.joint_positions*(1-activation)).tolist()
+        msg.velocity = (v).tolist()
+
+        msg.effort = (tau * activation).tolist()
+        msg.kp_scale = (np.array([1.0, 1.0, 1.0]) * (activation)).tolist()
+        msg.kd_scale = (np.array([1.0, 1.0, 1.0]) * (activation)).tolist()
+            
         self.joint_command_pub.publish(msg)
         
         # Publish joint states for visualization
         joint_state_msg = JointState()
         joint_state_msg.header.stamp = self.get_clock().now().to_msg()
         joint_state_msg.name = self.wbc._control_tasks.robot_wrapper.joint_names
-        joint_state_msg.position = self.joint_positions
-        joint_state_msg.velocity = self.joint_velocities
+        joint_state_msg.position = self.joint_positions.tolist()
+        joint_state_msg.velocity = self.joint_velocities.tolist()
         
         self.joint_state_pub.publish(joint_state_msg)
         

@@ -182,10 +182,10 @@ class ControlTasksSSEpi(ControlTasksSS):
         d = np.zeros(C.shape[0])
         
         for i in range(self.n_c):
-            C[i*self.n_q:(i+1)*self.n_q, :] = self.A_state.Ti[i+1] * (self.cbf_gamma + self.alpha)
-            C[i*self.n_q:(i+1)*self.n_q, self._id_tau_sl(i)] += - self.beta * np.eye(self.n_q)
-            d[i*self.n_q:(i+1)*self.n_q] = self.cbf_gamma * self.T_max \
-                - (self.cbf_gamma + self.alpha) * self.b_state.Ti[i+1]
+            C[i*self.n_q:(i+1)*self.n_q, :] = self.A_state.Ti[i+1] * (self.cbf_gamma - self.alpha)
+            C[i*self.n_q:(i+1)*self.n_q, self._id_tau_sl(i)] += self.beta * np.eye(self.n_q)
+            d[i*self.n_q:(i+1)*self.n_q] = self.cbf_gamma * self.T_max - self.alpha * self.T_0 \
+                - (self.cbf_gamma - self.alpha) * self.b_state.Ti[i+1]
             
         return C, d
     

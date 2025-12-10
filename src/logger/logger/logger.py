@@ -7,6 +7,7 @@ import rclpy
 from rclpy.node import Node
 
 from geometry_msgs.msg import PointStamped
+from pi3hat_moteus_int_msgs.msg import JointsCommand, JointsStates
 from sensor_msgs.msg import JointState
 from std_msgs.msg import Float64MultiArray
 
@@ -28,9 +29,16 @@ class Logger(Node):
         )
         
         self.temperature_subscription = self.create_subscription(
-            Float64MultiArray,
-            '/joint_states/temperature',
-            self.temperature_callback,
+            JointsStates,
+            "/state_broadcaster/joints_state",
+            self.joints_state_callback,
+            1,
+        )
+        
+        self.command_subscription = self.create_subscription(
+            JointsCommand,
+            "/joint_controller/command",
+            self.command_callback,
             1,
         )
         
@@ -57,25 +65,31 @@ class Logger(Node):
         
         self.joint_names = ['JOINT_1', 'JOINT_2', 'JOINT_3']
         
-        self.joint_positions = None
-        self.joint_velocities = None
-        self.joint_torques = None
-        self.temperatures = None
+        self.joint_positions = np.zeros(3) * np.nan
+        self.joint_velocities = np.zeros(3) * np.nan
+        self.joint_torques = np.zeros(3) * np.nan
+        self.joint_currents = np.zeros(3) * np.nan
+        self.temperatures = np.zeros(3) * np.nan
         
-        self.ee_position = None
-        self.reference_position = None
+        self.ee_position = np.zeros(3) * np.nan
+        self.reference_position = np.zeros(3) * np.nan
         
         self.k = 0
-        timesteps = 600
+        self.timesteps = 3000
         
-        self.times_vec = np.zeros(timesteps)
-        self.joint_positions_vec = np.zeros((timesteps, 3))
-        self.joint_velocities_vec = np.zeros((timesteps, 3))
-        self.joint_torques_vec = np.zeros((timesteps, 3))
-        self.temperatures_vec = np.zeros((timesteps, 3))
+        self.time_0 = None
         
-        self.ee_position_vec = np.zeros((timesteps, 3))
-        self.reference_position_vec = np.zeros((timesteps, 3))
+        self.times_vec = np.zeros(self.timesteps) * np.nan
+        self.joint_positions_vec = np.zeros((self.timesteps, 3)) * np.nan
+        self.joint_velocities_vec = np.zeros((self.timesteps, 3)) * np.nan
+        self.joint_torques_vec = np.zeros((self.timesteps, 3)) * np.nan
+        self.joint_currents_vec = np.zeros((self.timesteps, 3)) * np.nan
+        self.temperatures_vec = np.zeros((self.timesteps, 3)) * np.nan
+        
+        self.ee_position_vec = np.zeros((self.timesteps, 3)) * np.nan
+        self.reference_position_vec = np.zeros((self.timesteps, 3)) * np.nan
+        
+        self.get_logger().info("Logger node has been started.")
         
     def joint_states_callback(self, msg: JointState):
         self.joint_positions = np.array(msg.position)
@@ -87,7 +101,20 @@ class Logger(Node):
             idx = self.joint_names.index(joint_name)
             self.joint_positions[idx] = msg.position[i]
             self.joint_velocities[idx] = msg.velocity[i]
-            self.joint_torques[idx] = msg.effort[i]
+            # self.joint_torques[idx] = msg.effort[i]
+            
+    def joints_state_callback(self, msg: JointsStates):
+        for i, joint_name in enumerate(msg.name):
+            idx = self.joint_names.index(joint_name)
+            #! The interface is bugged. The curent is actually the temperature
+            #! and vice versa.
+            if not np.isnan(msg.current[i]):
+                self.temperatures[idx] = msg.current[i]
+            if not np.isnan(msg.temperature[i]):
+                self.joint_currents[idx] = msg.temperature[i]
+                
+    def command_callback(self, msg: JointsCommand):
+        pass
     
     def temperature_callback(self, msg: Float64MultiArray):
         self.temperatures = np.array(msg.data)
@@ -99,13 +126,20 @@ class Logger(Node):
         self.reference_position = np.array([msg.point.x, msg.point.y, msg.point.z])
         
     def timer_callback(self):
-        if self.joint_positions is None:
+        if np.any(np.isnan(self.joint_positions)):
             return
+        
+        if self.k % 100 == 0:
+            self.get_logger().info(f"{self.k/10} seconds out of {self.timesteps/10} seconds have been logged.")
+        
+        if self.time_0 is None:
+            self.time_0 = self.get_clock().now().nanoseconds / 1e9
             
-        self.times_vec[self.k] = self.get_clock().now().nanoseconds / 1e9
+        self.times_vec[self.k] = self.get_clock().now().nanoseconds / 1e9 - self.time_0
         self.joint_positions_vec[self.k, :] = self.joint_positions
         self.joint_velocities_vec[self.k, :] = self.joint_velocities
-        self.joint_torques_vec[self.k, :] = self.joint_torques
+        # self.joint_torques_vec[self.k, :] = self.joint_torques
+        self.joint_currents_vec[self.k, :] = self.joint_currents
         self.temperatures_vec[self.k, :] = self.temperatures
         
         self.ee_position_vec[self.k, :] = self.ee_position
@@ -134,6 +168,7 @@ class Logger(Node):
             joint_positions=self.joint_positions_vec,
             joint_velocities=self.joint_velocities_vec,
             joint_torques=self.joint_torques_vec,
+            joint_currents=self.joint_currents_vec,
             temperatures=self.temperatures_vec,
             ee_position=self.ee_position_vec,
             reference_position=self.reference_position_vec,

@@ -10,7 +10,7 @@ import pinocchio as pin
 from robot_model.robot_wrapper import RobotWrapper
 
 
-def plot_colourline(x, y, c, vmin=25, vmax=40):
+def plot_colourline(x, y, c, vmin=25, vmax=35.1):
     cmap = get_cmap('viridis').copy()
     cmap.set_over('red')
 
@@ -50,6 +50,19 @@ class Plot:
         self.robot_name = 'arm'
         self.robot_wrapper = RobotWrapper(self.robot_name)
         
+        self.t_max = 300
+        mask = self.npzfile['times'] <= self.t_max
+
+        self.npzfile = {
+            key: self.npzfile[key][mask]
+            for key in self.npzfile.files
+        }
+        for key in self.npzfile.keys():
+            self.npzfile[key] = np.where(
+                self.npzfile[key] == 0, np.nan, self.npzfile[key]
+            )
+        
+        
     @staticmethod
     def process_y_axis_labels(name):
         if name == "joint_positions":
@@ -60,6 +73,8 @@ class Plot:
             return r"Torques [Nm]"
         if name == "temperatures":
             return r"Temperatures [°C]"
+        if name == "joint_currents":
+            return r"Motor Currents [A]"
         if name == "ee_position":
             return r"End-Effector Position [m]"
 
@@ -94,7 +109,7 @@ class Plot:
         
         temp_max = np.max(temp, axis=1)
         
-        fig = plt.figure(figsize=(self.x_size_def, self.y_size_def))
+        fig = plt.figure(figsize=(self.x_size_def/1.25, self.y_size_def/1.25))
         ax = plt.gca()
         
         im = plot_colourline(
@@ -146,7 +161,7 @@ class Plot:
             for i in range(len(q))
         ])
         
-        fig, axs = plt.subplots(2, 1, figsize=(self.x_size_def, self.y_size_def), sharex=True)
+        fig, axs = plt.subplots(2, 1, figsize=(self.x_size_def/1.25, self.y_size_def/1.25), sharex=True)
         
         axs[0].plot(times, nullspace_vel)
         axs[0].set_ylabel(r"Nullspace Vel. [rad/s]")
@@ -165,8 +180,8 @@ class Plot:
             r'$\dot{q}_{\tiny T, 3}$',
         ])
         
-        axs[0].set_xlim([times[0], times[-1]])
-        axs[1].set_xlim([times[0], times[-1]])
+        axs[0].set_xlim([0, 300])
+        axs[1].set_xlim([0, 300])
         
         plt.savefig(
             os.path.join(self.foldername, 'pdf', self.subdir, "nullspace_vel.pdf"),
@@ -177,24 +192,35 @@ class Plot:
     def save_all_plots(self):
         times = self.npzfile['times']
         
-        for name in sorted(self.npzfile.files):
+        for name in sorted(self.npzfile.keys()):
             if name == 'times' or name == 'reference_position':
                 continue
             
             arr = self.npzfile[name]
             
-            plt.figure(figsize=(self.x_size_def, self.y_size_def))
+            plt.figure(figsize=(self.x_size_def/1.25, self.y_size_def/1.25))
             plt.plot(times, arr)
+            
+            if name == 'temperatures':
+                plt.plot(
+                    times, np.full_like(times, 35.0),
+                    color='k', linestyle='--', alpha=0.5,
+                    label=r'$T_{\tiny lim}$',
+                )
+                # plt.gca().set_ylim(26, 43)
             
             plt.xlabel('Time [s]')
             plt.ylabel(self.process_y_axis_labels(name))
-            plt.xlim([times[0], times[-1]])
+            plt.xlim([0, self.t_max])
             
             if name == 'ee_position':
                 arr2 = self.npzfile['reference_position']
                 plt.plot(times, arr2, linestyle=':', color='black', alpha=0.5)
             
-            plt.legend(self.joint_names)
+            if name != 'temperatures':
+                plt.legend(self.joint_names)
+            else:
+                plt.legend(self.joint_names + [r'$T_{\tiny lim}$'])
             
             plt.savefig(
                 os.path.join(self.foldername, 'pdf', self.subdir, name + ".pdf"),
@@ -273,7 +299,7 @@ def main():
             
             plot.save_all_plots()
             plot.save_ee_traj()
-            plot.save_nullspace_vel()
+            # plot.save_nullspace_vel()
 
     print("\nFinished.\n")
     

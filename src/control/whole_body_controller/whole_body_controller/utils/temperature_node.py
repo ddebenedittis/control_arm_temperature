@@ -30,7 +30,7 @@ class ActuatorsTemperature(Node):
         # ============================ Publishers =========================== #
         
         self.temperature_pub = self.create_publisher(
-            Float64MultiArray, '/joint_states/temperature', 1)
+            Float64MultiArray, '/state_broadcaster/temperature', 1)
         
         # ============================== Timer ============================== #
         

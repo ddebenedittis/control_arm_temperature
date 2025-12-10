@@ -11,6 +11,6 @@ whole_body_controller:
 
         dt: 0.25
 
-        k_p: 10.0
-        k_d: 10.0
+        k_p: 1000.0
+        k_d: 500.0
         k_i: 0.0

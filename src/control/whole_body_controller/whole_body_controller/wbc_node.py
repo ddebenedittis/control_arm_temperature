@@ -32,8 +32,8 @@ class WBCController(Node):
             'arm', ss=self.ss, epi=self.epi, cbf=self.cbf, hqp=self.hqp,
         )
         
-        self.k_p = 0.001
-        self.k_d = 0.0001
+        self.k_p = np.array([1.0, 0.5, 0.1]) * 0.0
+        self.k_d = np.array([1.0, 0.5, 0.1]) * 0.2
         
         # ============================ Parameters =========================== #
         
@@ -41,10 +41,10 @@ class WBCController(Node):
         self.task = self.get_parameter('task').get_parameter_value().string_value
         self.wbc.task = self.task
         if self.task == 'obs8':
-            self.x_min =  0.25
-            self.y_min = -0.45
-            self.x_max =  0.35
-            self.y_max = -0.35
+            self.x_min = -100.0
+            self.y_min = -0.425
+            self.x_max =  0.375
+            self.y_max =  100.0
             
             self.wbc.x_min = self.x_min
             self.wbc.y_min = self.y_min
@@ -68,11 +68,11 @@ class WBCController(Node):
 
         
         try:
-            self.declare_parameter('kp', 10.0)
+            self.declare_parameter('kp', 1000.0)
             self.wbc._control_tasks.k_p = self.get_parameter('kp').get_parameter_value().double_value
         except InvalidParameterTypeException as _:
             try:
-                self.declare_parameter('kp', 10)
+                self.declare_parameter('kp', 1000)
                 self.wbc._control_tasks.k_p = float(
                     self.get_parameter('kp').get_parameter_value().integer_value)
             except Exception as e:
@@ -81,11 +81,11 @@ class WBCController(Node):
 
         
         try:
-            self.declare_parameter('kd', 10.0)
+            self.declare_parameter('kd', 500.0)
             self.wbc._control_tasks.k_d = self.get_parameter('kd').get_parameter_value().double_value
         except InvalidParameterTypeException as _:
             try:
-                self.declare_parameter('kd', 10)
+                self.declare_parameter('kd', 500)
                 self.wbc._control_tasks.k_d = float(
                     self.get_parameter('kd').get_parameter_value().integer_value)
             except Exception as e:
@@ -117,7 +117,7 @@ class WBCController(Node):
         
         self.temperature_subscription = self.create_subscription(
             Float64MultiArray,
-            '/joint_states/temperature',
+            '/state_broadcaster/temperature',
             self.temperature_callback,
             1,
         )
@@ -238,14 +238,11 @@ class WBCController(Node):
             p_ref, v_ref, a_ref
         )
         
-        tau_ff = sol.tau
+        tau = 0.5*sol.tau
         if not self.ss:
-            tau = tau_ff \
-                + self.k_p * (sol.q - self.joint_positions) \
+            tau += self.k_p * (sol.q - self.joint_positions) \
                 + self.k_d * (sol.v - self.joint_velocities)
-        else:
-            tau = tau_ff
-        
+                
         msg = Float64MultiArray()
         msg.data = tau.tolist()
         self.joint_command_pub.publish(msg)
