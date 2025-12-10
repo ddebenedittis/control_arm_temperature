@@ -20,23 +20,23 @@
 
     <!-- ARM VISUALIZATION meshes -->
     <xacro:property name="arm_base"
-        value="file://$(find arm_description)/meshes//Body.stl" />
+        value="file://$(find arm_description)/meshes/Body.stl" />
     <xacro:property name="arm_module_left_front"
-        value="file://$(find arm_description)/meshes//Module_left_front.stl" />
+        value="file://$(find arm_description)/meshes/Module_left_front.stl" />
     <xacro:property name="arm_module_left_hind"
-        value="file://$(find arm_description)/meshes//Module_left_hind.stl" />
+        value="file://$(find arm_description)/meshes/Module_left_hind.stl" />
     <xacro:property name="arm_module_2_left"
-        value="file://$(find arm_description)/meshes//Module_2_left.stl" />
+        value="file://$(find arm_description)/meshes/Module_2_left.stl" />
     <xacro:property name="arm_lower_leg_left"
-        value="file://$(find arm_description)/meshes//Lower_leg_left.stl" />
+        value="file://$(find arm_description)/meshes/Lower_leg_left.stl" />
     <xacro:property name="arm_module_right_front"
-        value="file://$(find arm_description)/meshes//Module_right_front.stl" />
+        value="file://$(find arm_description)/meshes/Module_right_front.stl" />
     <xacro:property name="arm_module_right_hind"
-        value="file://$(find arm_description)/meshes//Module_right_hind.stl" />
+        value="file://$(find arm_description)/meshes/Module_right_hind.stl" />
     <xacro:property name="arm_module_2_right"
-        value="file://$(find arm_description)/meshes//Module_2_right.stl" />
+        value="file://$(find arm_description)/meshes/Module_2_right.stl" />
     <xacro:property name="arm_lower_leg_right"
-        value="file://$(find arm_description)/meshes//Lower_leg_right.stl" />
+        value="file://$(find arm_description)/meshes/Lower_leg_right.stl" />
 
     <!-- EACH MACRO CONSISTS OF THE LINK AND ITS FOLLOWING JOINT -->
 
