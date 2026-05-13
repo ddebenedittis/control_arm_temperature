@@ -1,3 +1,6 @@
+import time
+from collections import deque
+
 import numpy as np
 
 import rclpy
@@ -160,7 +163,9 @@ class WBCController(Node):
         # ======================== Internal Variables ======================= #
         
         self.counter = 0
-        
+
+        self.solve_times = deque(maxlen=10)
+
         self.path_msg = Path()
         self.path_msg.header.frame_id = 'base_link'
         self.path_msg.poses = []
@@ -357,17 +362,27 @@ class WBCController(Node):
             
     def timer_callback(self):
         p_ref, v_ref, a_ref = self.get_ref()
-        
+
+        t_start = time.perf_counter()
         sol = self.wbc(
             self.joint_positions, self.joint_velocities, self.temp,
             p_ref, v_ref, a_ref
         )
-        
+        self.solve_times.append(time.perf_counter() - t_start)
+
+        if len(self.solve_times) == self.solve_times.maxlen:
+            avg_ms = 1e3 * sum(self.solve_times) / len(self.solve_times)
+            self.get_logger().info(
+                f"Avg WBC solve time over last {self.solve_times.maxlen} steps: {avg_ms:.2f} ms",
+                throttle_duration_sec=2.0,
+            )
+
         q = self.joint_positions + 1/10 * (sol.v - self.joint_velocities)
         v = sol.v * 0
         tau = sol.tau * self.k_tau
         
         activation = smooth_activation(self.temp_low_passed)
+        # activation = 1.0
         
         msg = JointsCommand()
         msg.header.stamp = self.get_clock().now().to_msg()

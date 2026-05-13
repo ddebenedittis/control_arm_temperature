@@ -201,6 +201,13 @@ class Plot:
             plt.figure(figsize=(self.x_size_def, self.y_size_def))
             plt.plot(times, arr)
             
+            if name == 'temperatures':
+                plt.plot(
+                    times, np.full_like(times, 35.0),
+                    color='k', linestyle='--', alpha=0.5,
+                    label=r'$T_{\tiny lim}$',
+                )
+            
             plt.xlabel('Time [s]')
             plt.ylabel(self.process_y_axis_labels(name))
             plt.xlim([0, self.t_max])
@@ -209,7 +216,10 @@ class Plot:
                 arr2 = self.npzfile['reference_position']
                 plt.plot(times, arr2, linestyle=':', color='black', alpha=0.5)
             
-            plt.legend(self.joint_names)
+            if name != 'temperatures':
+                plt.legend(self.joint_names)
+            else:
+                plt.legend(self.joint_names + [r'$T_{\tiny lim}$'])
             
             plt.savefig(
                 os.path.join(self.foldername, 'pdf', self.subdir, name + ".pdf"),

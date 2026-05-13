@@ -160,9 +160,9 @@ class ControlTasks:
         
         for i in range(self.n_c):
             C[i*self.n_q:(i+1)*self.n_q, self._id_vi(i+1)] = np.eye(self.n_q)
-            d[i*self.n_q:(i+1)*self.n_q] = 2.0
+            d[i*self.n_q:(i+1)*self.n_q] = 5.0
             C[(i+1)*self.n_q:(i+2)*self.n_q, self._id_vi(i+1)] = - np.eye(self.n_q)
-            d[(i+1)*self.n_q:(i+2)*self.n_q] = 2.0
+            d[(i+1)*self.n_q:(i+2)*self.n_q] = 5.0
             
         return C, d
             

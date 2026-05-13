@@ -133,6 +133,7 @@
                 <origin xyz="${trasl_xyz}" rpy="0 0 0" />
                 <axis xyz="${axis}" />
                 <limit effort="2.7" lower="-${PI}" upper="${PI}" velocity="1000" />
+                <dynamics damping="0.0" friction="0.0"/>
             </joint>
         </xacro:unless>
     </xacro:macro>
@@ -151,6 +152,7 @@
             <origin xyz="${EE_trasl_xyz}" rpy="0 0 0" />
             <axis xyz="${axis}" />
             <limit effort="2.7" lower="-${PI}" upper="${PI}" velocity="1000" />
+            <dynamics damping="0.0" friction="0.0"/>
         </joint>
         <!-- EE link -->
         <link name="MODULE_EE">
