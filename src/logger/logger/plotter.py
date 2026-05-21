@@ -10,6 +10,22 @@ import pinocchio as pin
 from robot_model.robot_wrapper import RobotWrapper
 
 
+def low_pass_filter(arr, beta=0.95):
+    out = np.full_like(arr, np.nan)
+    x = None
+    for k in range(len(arr)):
+        meas = arr[k]
+        if x is None:
+            if np.all(np.isnan(meas)):
+                continue
+            x = np.where(np.isnan(meas), 0.0, meas)
+        else:
+            valid = np.where(np.isnan(meas), x, meas)
+            x = beta * x + (1 - beta) * valid
+        out[k] = x
+    return out
+
+
 def plot_colourline(x, y, c, vmin=25, vmax=35.1):
     cmap = get_cmap('viridis').copy()
     cmap.set_over('red')
@@ -109,7 +125,7 @@ class Plot:
         
         temp_max = np.max(temp, axis=1)
         
-        fig = plt.figure(figsize=(self.x_size_def, self.y_size_def))
+        fig = plt.figure(figsize=(self.x_size_def/1.25, self.y_size_def/1.25))
         ax = plt.gca()
         
         im = plot_colourline(
@@ -161,7 +177,7 @@ class Plot:
             for i in range(len(q))
         ])
         
-        fig, axs = plt.subplots(2, 1, figsize=(self.x_size_def, self.y_size_def), sharex=True)
+        fig, axs = plt.subplots(2, 1, figsize=(self.x_size_def/1.25, self.y_size_def/1.25), sharex=True)
         
         axs[0].plot(times, nullspace_vel)
         axs[0].set_ylabel(r"Nullspace Vel. [rad/s]")
@@ -198,28 +214,47 @@ class Plot:
             
             arr = self.npzfile[name]
             
-            plt.figure(figsize=(self.x_size_def, self.y_size_def))
-            plt.plot(times, arr)
-            
+            plt.figure(figsize=(self.x_size_def/1.25, self.y_size_def/1.25))
+
             if name == 'temperatures':
+                plt.plot(times, arr, alpha=0.5)
+                plt.gca().set_prop_cycle(None)
+                arr_filtered = low_pass_filter(arr, beta=0.95)
+                plt.plot(times, arr_filtered)
                 plt.plot(
                     times, np.full_like(times, 35.0),
                     color='k', linestyle='--', alpha=0.5,
                     label=r'$T_{\tiny lim}$',
                 )
-            
+
+                # Pair temperature y-axis limits across matched experiments so
+                # that the temperature-aware vs temperature-unaware runs are
+                # directly comparable.
+                if 'obs8' in self.subdir:
+                    plt.gca().set_ylim(26, 44)
+                elif 'point' in self.subdir:
+                    plt.gca().set_ylim(26, 42)
+                elif 'circle' in self.subdir:
+                    plt.gca().set_ylim(26, 38)
+            else:
+                plt.plot(times, arr)
+
             plt.xlabel('Time [s]')
             plt.ylabel(self.process_y_axis_labels(name))
             plt.xlim([0, self.t_max])
-            
+
             if name == 'ee_position':
                 arr2 = self.npzfile['reference_position']
                 plt.plot(times, arr2, linestyle=':', color='black', alpha=0.5)
-            
+
             if name != 'temperatures':
                 plt.legend(self.joint_names)
             else:
-                plt.legend(self.joint_names + [r'$T_{\tiny lim}$'])
+                lines = plt.gca().get_lines()
+                plt.legend(
+                    lines[3:7],
+                    self.joint_names + [r'$T_{\tiny lim}$'],
+                )
             
             plt.savefig(
                 os.path.join(self.foldername, 'pdf', self.subdir, name + ".pdf"),
