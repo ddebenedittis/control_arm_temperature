@@ -76,6 +76,22 @@ Where:
 
 [Davide De Benedittis](https://github.com/ddebenedittis)
 
+## Citation
+
+If you find this project useful in your research, please consider citing my related work (available [here](https://doi.org/10.1109/TCST.2026.3721130)):
+
+```bibtex
+@ARTICLE{debenedittis2026keep,
+  author={De Benedittis, Davide and Angelini, Franco and Incerpi, Riccardo and Pallottino, Lucia and Garabini, Manolo},
+  journal={IEEE Transactions on Control Systems Technology}, 
+  title={Keep It Cool: Optimal Control of Robotic Systems Under Temperature Constraints}, 
+  year={2026},
+  volume={},
+  number={},
+  pages={1-13},
+  doi={10.1109/TCST.2026.3721130}}
+```
+
 ## References
 
 - (Docker ROS NVIDIA)[https://github.com/ddebenedittis/docker_ros_nvidia]: Docker image for ROS with NVIDIA support.
